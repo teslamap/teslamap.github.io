@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tesla Smart Navigation</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.2s, color 0.2s; }
+        body, html { width: 100%; height: 100%; overflow: hidden; position: relative; }
+        
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #111; }
+
+        /* ========= DARK MODE ========= */
+        body.dark-mode { background: #121212; color: #fff; }
+        body.dark-mode .panel-bg { background: rgba(30, 30, 30, 0.9); border: 1px solid #444; backdrop-filter: blur(8px); }
+        body.dark-mode .search-input, body.dark-mode .settings-input, body.dark-mode .settings-select { color: #fff; background: #222; border: 1px solid #444; }
+        body.dark-mode .btn { background: #2c2c2e; color: #fff; border: 1px solid #444; }
+        body.dark-mode .btn:hover { background: #3a3a3c; }
+        body.dark-mode .fav-panel, body.dark-mode .settings-panel { background: rgba(25, 25, 25, 0.95); border: 1px solid #333; }
+        body.dark-mode .fav-item, body.dark-mode .trip-item { background: #222; border: 1px solid #333; }
+        body.dark-mode .fav-item:hover, body.dark-mode .trip-item:hover { background: #333; }
+        body.dark-mode .info-card-bg { background: rgba(20, 20, 20, 0.9); border: 1px solid #007aff; }
+
+        /* ========= LIGHT MODE ========= */
+        body.light-mode { background: #f4f4f7; color: #000; }
+        body.light-mode .panel-bg { background: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; backdrop-filter: blur(8px); }
+        body.light-mode .search-input, body.light-mode .settings-input, body.light-mode .settings-select { color: #000; background: #fff; border: 1px solid #ccc; }
+        body.light-mode .btn { background: #fff; color: #000; border: 1px solid #ccc; }
+        body.light-mode .btn:hover { background: #f0f0f0; }
+        body.light-mode .fav-panel, body.light-mode .settings-panel { background: rgba(255, 255, 255, 0.98); border: 1px solid #ccc; }
+        body.light-mode .fav-item, body.light-mode .trip-item { background: #f9f9f9; color: #000; border: 1px solid #eee; }
+        body.light-mode .fav-item:hover, body.light-mode .trip-item:hover { background: #f0f0f0; }
+        body.light-mode .fav-title, body.light-mode .settings-title { color: #555; }
+
+        /* ========= UI ELEMENTS ========= */
+        .top-bar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+        .search-box { flex: 1; display: flex; border-radius: 8px; overflow: hidden; }
+        .search-input { flex: 1; background: transparent; border: none; padding: 10px 12px; font-size: 14px; outline: none; }
+        
+        .btn { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; outline: none; }
+        .btn-fav { background: #3a3a3c; }
+        body.light-mode .btn-fav { background: #e0e0e0; }
+
+        .btn-mode-switch { background: #007aff !important; color: white !important; border: none !important; }
+        .btn-settings { background: #5856d6 !important; color: white !important; border: none !important; }
+
+        /* ========= PANELS ========= */
+        .fav-panel, .settings-panel { position: absolute; top: 60px; left: 12px; width: 340px; border-radius: 10px; padding: 14px; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 85vh; overflow-y: auto; pointer-events: auto; }
+        .fav-panel.active, .settings-panel.active { display: block; }
+        .fav-title, .settings-title { font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        
+        .settings-group { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+        .settings-group label { font-size: 12px; color: #888; }
+        .settings-input, .settings-select { padding: 8px; border-radius: 6px; font-size: 13px; outline: none; width: 100%; }
+
+        .degradation-box { background: rgba(0, 122, 255, 0.1); border: 1px solid #007aff; border-radius: 6px; padding: 8px; font-size: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+        .deg-val { color: #ff9500; font-weight: bold; }
+
+        .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .fav-del-btn { color: #ff3b30; font-weight: bold; padding: 2px 6px; margin-left: 8px; }
+
+        /* ========= CALIBRATION SECTION ========= */
+        .calib-section { margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px; }
+        .trip-item { padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .chart-container { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; margin-top: 8px; font-size: 11px; color: #aaa; text-align: center; }
+
+        /* ========= BATTERY & ROUTE INFO ========= */
+        .info-card { position: absolute; top: 60px; right: 12px; z-index: 1000; display: none; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
+        .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .dist-text { color: #34c759; font-size: 16px; }
+        .battery-text { color: #ffcc00; font-size: 15px; }
+        .kwh-text { color: #007aff; font-size: 12px; font-weight: normal; }
+        .elev-text { color: #aaa; font-size: 11px; font-weight: normal; }
+
+        .btn-add-fav { background: #ff9500 !important; color: #000 !important; font-weight: bold; border: none !important; }
+        .btn-calib { background: #34c759 !important; color: #000 !important; font-weight: bold; width: 100%; margin-top: 6px; }
+
+        .leaflet-routing-container, .leaflet-routing-error, .leaflet-control-attribution { display: none !important; }
+        
+        .tesla-icon {
+            width: 30px; height: 55px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><path d="M20,40 Q50,10 80,40 L85,150 Q50,190 15,150 Z" fill="%23cc0000" stroke="%23111" stroke-width="4"/><path d="M25,55 Q50,30 75,55 L72,80 Q50,70 28,80 Z" fill="%23222"/><path d="M28,110 Q50,100 72,110 L70,140 Q50,150 30,140 Z" fill="%23222"/><circle cx="20" cy="170" r="6" fill="%23ff0000"/><circle cx="80" cy="170" r="6" fill="%23ff0000"/><circle cx="25" cy="30" r="5" fill="%23ffffff"/><circle cx="75" cy="30" r="5" fill="%23ffffff"/></svg>');
+            background-size: contain; background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <div id="map"></div>
+
+    <div class="top-bar">
+        <button class="btn btn-fav panel-bg" onclick="toggleFavs()">★</button>
+        <button class="btn btn-settings" onclick="toggleSettings()">⚙️</button>
+        <div class="search-box panel-bg">
+            <input type="text" id="searchInput" class="search-input" placeholder="ძებნა..." onkeydown="if(event.key==='Enter') searchLocation()">
+            <button class="btn" onclick="searchLocation()">🔍</button>
+        </div>
+        <button class="btn panel-bg" onclick="goToMyLocation()">📍</button>
+        <button class="btn panel-bg" id="btnZoom" onclick="toggleZoomMode()">ZOOM</button>
+        <button class="btn btn-mode-switch" onclick="toggleTheme()">☀️/🌙</button>
+    </div>
+
+    <!-- ფავორიტების პანელი -->
+    <div class="fav-panel" id="favPanel">
+        <div class="fav-title">შენახული ადგილები</div>
+        <div id="favList"></div>
+    </div>
+
+    <!-- პარამეტრების და კალიბრაციის პანელი -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-title">მანქანის პარამეტრები</div>
+        
+        <div class="settings-group">
+            <label>მოდელი:</label>
+            <select id="carModelSelect" class="settings-select" onchange="updateTrims()">
+                <option value="Model 3">Model 3</option>
+                <option value="Model Y">Model Y</option>
+                <option value="Model S">Model S</option>
+                <option value="Model X">Model X</option>
+            </select>
+        </div>
+
+        <div class="settings-group">
+            <label>ტრიმი (კომპლექტაცია):</label>
+            <select id="carTrimSelect" class="settings-select" onchange="updateBatteries()">
+                <!-- JS დინამიკურად ავსებს -->
+            </select>
+        </div>
+
+        <div class="settings-group">
+            <label>ელემენტი / ქიმია:</label>
+            <select id="carBatterySelect" class="settings-select" onchange="onBatteryChange()">
+                <!-- JS დინამიკურად ავსებს -->
+            </select>
+        </div>
+
+        <div class="settings-group">
+            <label>100%-ზე ფაქტობრივი გარბენი (კმ):</label>
+            <input type="number" id="fullRangeInput" class="settings-input" value="380" oninput="calculateDegradation()">
+        </div>
+
+        <div class="degradation-box">
+            <div>ქარხნული ახალი გარბენი: <span id="factoryRangeVal">386</span> კმ</div>
+            <div>ბატარეის დეგრადაცია: <span id="degVal" class="deg-val">0.0%</span></div>
+        </div>
+
+        <div class="settings-group" style="margin-top: 8px;">
+            <label>საბაზისო წვა (Wh/km):</label>
+            <input type="number" id="baseConsumptionInput" class="settings-input" value="150" onchange="saveSettings()">
+        </div>
+
+        <!-- კალიბრაციის სექცია -->
+        <div class="calib-section">
+            <div class="settings-title" style="margin-bottom:6px;">ტრიპის კალიბრაცია</div>
+            <button class="btn btn-calib" onclick="startCalibrationTrip()">📍 ახალი ტრიპის დაწყება/დასრულება</button>
+            <div class="chart-container" id="calibStats">კალიბრაციის ისტორია ცარიელია</div>
+            <div id="tripList" style="margin-top:6px; max-height:120px; overflow-y:auto;"></div>
+        </div>
+
+        <button class="btn btn-mode-switch" style="width:100%; margin-top:10px;" onclick="toggleSettings()">შენახვა / დახურვა</button>
+    </div>
+
+    <div class="info-card" id="infoCard">
+        <div class="metrics-card info-card-bg">
+            <div class="dist-text">⬆ <span id="distVal">0</span> კმ</div>
+            <div class="battery-text">🔋 -<span id="batVal">0</span>%</div>
+            <div class="kwh-text">(~<span id="kwhVal">0</span> kWh)</div>
+            <div class="elev-text">▲ <span id="climbVal">0</span>m | ▼ <span id="descentVal">0</span>m</div>
+        </div>
+        <button class="btn btn-add-fav" onclick="saveCurrentPinAsFav()">+ ფავორიტებში</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        const teslaDatabase = {
+            "Model 3": {
+                "Standard Range Plus": [
+                    { name: "Panasonic NCA (50 kWh)", factoryRange: 386 },
+                    { name: "CATL LFP (55 kWh)", factoryRange: 423 }
+                ],
+                "Rear-Wheel Drive (LFP)": [
+                    { name: "CATL LFP 60kWh", factoryRange: 438 },
+                    { name: "CATL LFP 57.5kWh", factoryRange: 430 }
+                ],
+                "Long Range AWD": [
+                    { name: "LG NMC (75 kWh)", factoryRange: 568 },
+                    { name: "Panasonic NCA (75 kWh)", factoryRange: 580 }
+                ],
+                "Performance": [
+                    { name: "Panasonic NCA (75 kWh)", factoryRange: 507 }
+                ]
+            },
+            "Model Y": {
+                "Standard Range": [
+                    { name: "CATL LFP (60 kWh)", factoryRange: 395 }
+                ],
+                "Long Range AWD": [
+                    { name: "LG NMC (78 kWh)", factoryRange: 533 },
+                    { name: "Panasonic NCA (78 kWh)", factoryRange: 525 }
+                ],
+                "Performance": [
+                    { name: "Panasonic NCA (78 kWh)", factoryRange: 488 }
+                ]
+            },
+            "Model S": {
+                "Long Range": [
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 652 }
+                ],
+                "Plaid": [
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 637 }
+                ]
+            },
+            "Model X": {
+                "Long Range": [
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 560 }
+                ],
+                "Plaid": [
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 536 }
+                ]
+            }
+        };
+
+        let isCloseZoom = false;
+        let myLocation = L.latLng(41.6434, 41.6399);
+        let currentDestination = null;
+        let currentRouteDist = 0;
+        let currentRouteClimb = 0;
+        let currentRouteDescent = 0;
+        let currentTheme = localStorage.getItem('tesla_theme') || 'dark';
+
+        let favorites = JSON.parse(localStorage.getItem('tesla_favs')) || [];
+        let calibrationTrips = JSON.parse(localStorage.getItem('tesla_calib_trips')) || [];
+
+        let carSettings = JSON.parse(localStorage.getItem('tesla_settings')) || {
+            model: "Model 3",
+            trim: "Standard Range Plus",
+            battery: "Panasonic NCA (50 kWh)",
+            factoryRange: 386,
+            fullRange: 325,
+            baseConsumption: 150
+        };
+
+        document.getElementById('carModelSelect').value = carSettings.model;
+        updateTrims(carSettings.trim);
+        document.getElementById('fullRangeInput').value = carSettings.fullRange;
+        document.getElementById('baseConsumptionInput').value = carSettings.baseConsumption;
+        calculateDegradation();
+        renderCalibrationUI();
+
+        const map = L.map('map', { 
+            preferCanvas: true, 
+            zoomControl: false,
+            attributionControl: false 
+        }).setView(myLocation, 15);
+        
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        const darkTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 });
+        const lightTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 });
+
+        applyTheme(currentTheme);
+
+        const teslaIcon = L.divIcon({ className: 'tesla-icon', iconSize: [30, 55], iconAnchor: [15, 27] });
+
+        const routingControl = L.Routing.control({
+            waypoints: [myLocation],
+            router: L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                options: { geometries: 'geojson', overview: 'full' }
+            }),
+            routeWhileDragging: false,
+            addWaypoints: false,
+            showAlternatives: false,
+            createMarker: function(i, wp) {
+                if (i === 0) return L.marker(wp.latLng, { icon: teslaIcon });
+                const marker = L.marker(wp.latLng, { draggable: true });
+                marker.on('dragend', e => {
+                    currentDestination = e.target.getLatLng();
+                    routingControl.setWaypoints([myLocation, currentDestination]);
+                });
+                return marker;
+            },
+            lineOptions: { styles: [{ color: '#007aff', weight: 6, opacity: 0.9 }] }
+        }).addTo(map);
+
+        map.on('click', e => {
+            currentDestination = e.latlng;
+            routingControl.setWaypoints([myLocation, currentDestination]);
+        });
+
+        routingControl.on('routesfound', e => {
+            const route = e.routes[0];
+            currentRouteDist = route.summary.totalDistance / 1000;
+            
+            loadSettingsFromUI();
+
+            let baseKwh = (currentRouteDist * carSettings.baseConsumption) / 1000;
+            currentRouteClimb = Math.round(currentRouteDist * 3.5); 
+            currentRouteDescent = Math.round(currentRouteDist * 3.3);
+            
+            let elevationFactorKwh = (currentRouteClimb * 0.005) - (currentRouteDescent * 0.003);
+            if (elevationFactorKwh < 0) elevationFactorKwh = 0;
+
+            let finalKwh = baseKwh + elevationFactorKwh;
+
+            const currentTotalCapacityKwh = (carSettings.fullRange * carSettings.baseConsumption) / 1000;
+            const usedPercent = (finalKwh / currentTotalCapacityKwh) * 100;
+
+            document.getElementById('distVal').innerText = currentRouteDist.toFixed(1);
+            document.getElementById('batVal').innerText = usedPercent.toFixed(1);
+            document.getElementById('kwhVal').innerText = finalKwh.toFixed(1);
+            document.getElementById('climbVal').innerText = currentRouteClimb;
+            document.getElementById('descentVal').innerText = currentRouteDescent;
+
+            document.getElementById('infoCard').style.display = 'flex';
+        });
+
+        // ========= კალიბრაციის ლოგიკა =========
+        function startCalibrationTrip() {
+            if (currentRouteDist <= 0) {
+                alert("ჯერ მონიშნეთ მარშრუტი რუკაზე!");
+                return;
+            }
+
+            const startPct = prompt("შეიყვანეთ ბატარეის პროცენტი მგზავრობის დაწყებისას (მაგ: 90):");
+            if (startPct === null) return;
+            const endPct = prompt("შეიყვანეთ ბატარეის პროცენტი მგზავრობის დასრულებისას (მაგ: 45):");
+            if (endPct === null) return;
+
+            const sp = parseFloat(startPct);
+            const ep = parseFloat(endPct);
+
+            if (isNaN(sp) || isNaN(ep) || sp <= ep) {
+                alert("მონაცემები არასწორია! დაწყების პროცენტი მეტი უნდა იყოს დასრულების პროცენტზე.");
+                return;
+            }
+
+            const usedPct = sp - ep; // რეალურად დახარჯული პროცენტი
+            loadSettingsFromUI();
+
+            // სრული ბატარეის ტევადობა kWh-ში
+            const totalBattKwh = (carSettings.fullRange * carSettings.baseConsumption) / 1000;
+            // რეალურად დახარჯული kWh
+            const actualKwh = (usedPct / 100) * totalBattKwh;
+
+            // რელიეფის ენერგიის გამოკლება რომ სუფთა წვა მივიღოთ
+            let elevationFactorKwh = (currentRouteClimb * 0.005) - (currentRouteDescent * 0.003);
+            if (elevationFactorKwh < 0) elevationFactorKwh = 0;
+
+            let pureDriveKwh = actualKwh - elevationFactorKwh;
+            if (pureDriveKwh < 0) pureDriveKwh = actualKwh;
+
+            // ახალი გამოთვლილი საბაზისო წვა (Wh/km)
+            const calculatedNewConsumption = Math.round((pureDriveKwh * 1000) / currentRouteDist);
+
+            if (calculatedNewConsumption > 80 && calculatedNewConsumption < 350) {
+                // ძველი და ახალი წვის საშუალო (სტაბილიზაციისთვის)
+                carSettings.baseConsumption = Math.round((carSettings.baseConsumption + calculatedNewConsumption) / 2);
+                document.getElementById('baseConsumptionInput').value = carSettings.baseConsumption;
+                
+                // ვინახავთ ისტორიაში
+                calibrationTrips.unshift({
+                    dist: currentRouteDist.toFixed(1),
+                    used: usedPct.toFixed(1),
+                    newCons: carSettings.baseConsumption,
+                    date: new Date().toLocaleDateString()
+                });
+                if (calibrationTrips.length > 5) calibrationTrips.pop(); // ბოლო 5 ტრიპი
+
+                localStorage.setItem('tesla_calib_trips', JSON.stringify(calibrationTrips));
+                saveSettings();
+                renderCalibrationUI();
+
+                alert(` წარმატებით დაკალიბრდა!\nახალი რეკომენდებული საბაზისო წვა: ${carSettings.baseConsumption} Wh/km`);
+            } else {
+                alert("გამოთვლილი წვა ცდება ნორმის ფარგლებს (80-350 Wh/km). შეამოწმეთ პროცენტები.");
+            }
+        }
+
+        function renderCalibrationUI() {
+            const listEl = document.getElementById('tripList');
+            const statsEl = document.getElementById('calibStats');
+            listEl.innerHTML = '';
+
+            if (calibrationTrips.length === 0) {
+                statsEl.innerText = "კალიბრაციის ისტორია ცარიელია (გაიარეთ ტრიპი და დაკალიბრეთ)";
+                return;
+            }
+
+            // გრაფიკული ვიზუალიზაცია ტექსტური მინი-გრაფით
+            let avg = Math.round(calibrationTrips.reduce((acc, t) => acc + t.newCons, 0) / calibrationTrips.length);
+            statsEl.innerHTML = `ბოლო ტრიპების საშუალო წვა: <b>${avg} Wh/km</b> (სულ: ${calibrationTrips.length} ტრიპი)`;
+
+            calibrationTrips.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'trip-item';
+                item.innerHTML = `<span>📅 ${t.date} | ${t.dist} კმ (-${t.used}%)</span> <b style="color:#34c759;">${t.newCons} Wh/km</b>`;
+                listEl.appendChild(item);
+            });
+        }
+
+        function updateTrims(selectedTrim = null) {
+            const model = document.getElementById('carModelSelect').value;
+            const trimSelect = document.getElementById('carTrimSelect');
+            trimSelect.innerHTML = '';
+
+            const trims = Object.keys(teslaDatabase[model]);
+            trims.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.innerText = t;
+                trimSelect.appendChild(opt);
+            });
+
+            if (selectedTrim && trims.includes(selectedTrim)) {
+                trimSelect.value = selectedTrim;
+            }
+            updateBatteries();
+        }
+
+        function updateBatteries(selectedBattery = null) {
+            const model = document.getElementById('carModelSelect').value;
+            const trim = document.getElementById('carTrimSelect').value;
+            const battSelect = document.getElementById('carBatterySelect');
+            battSelect.innerHTML = '';
+
+            const batteries = teslaDatabase[model][trim] || [];
+            batteries.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.name;
+                opt.setAttribute('data-range', b.factoryRange);
+                opt.innerText = `${b.name} (${b.factoryRange} კმ ახალი)`;
+                battSelect.appendChild(opt);
+            });
+
+            if (selectedBattery) {
+                battSelect.value = selectedBattery;
+            }
+            onBatteryChange();
+        }
+
+        function onBatteryChange() {
+            const battSelect = document.getElementById('carBatterySelect');
+            const selectedOpt = battSelect.options[battSelect.selectedIndex];
+            if (selectedOpt) {
+                const factoryRange = parseFloat(selectedOpt.getAttribute('data-range'));
+                document.getElementById('factoryRangeVal').innerText = factoryRange;
+                carSettings.factoryRange = factoryRange;
+            }
+            calculateDegradation();
+        }
+
+        function calculateDegradation() {
+            loadSettingsFromUI();
+            let deg = 0;
+            if (carSettings.factoryRange > 0) {
+                deg = ((carSettings.factoryRange - carSettings.fullRange) / carSettings.factoryRange) * 100;
+                if (deg < 0) deg = 0;
+            }
+            document.getElementById('degVal').innerText = deg.toFixed(1) + '%';
+            saveSettings();
+        }
+
+        function saveSettings() {
+            loadSettingsFromUI();
+            localStorage.setItem('tesla_settings', JSON.stringify(carSettings));
+            if (currentDestination) {
+                routingControl.setWaypoints([myLocation, currentDestination]);
+            }
+        }
+
+        function loadSettingsFromUI() {
+            carSettings.model = document.getElementById('carModelSelect').value;
+            carSettings.trim = document.getElementById('carTrimSelect').value;
+            carSettings.battery = document.getElementById('carBatterySelect').value;
+            carSettings.fullRange = parseFloat(document.getElementById('fullRangeInput').value) || 325;
+            carSettings.factoryRange = parseFloat(document.getElementById('factoryRangeVal').innerText) || 386;
+            carSettings.baseConsumption = parseFloat(document.getElementById('baseConsumptionInput').value) || 150;
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.classList.toggle('active');
+            document.getElementById('favPanel').classList.remove('active');
+        }
+
+        function toggleZoomMode() {
+            isCloseZoom = !isCloseZoom;
+            if (isCloseZoom) {
+                map.setView(myLocation, 16, { animate: true });
+            } else {
+                map.setView(myLocation, 14, { animate: true });
+            }
+        }
+
+        function toggleTheme() {
+            currentTheme = (currentTheme === 'dark') ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            localStorage.setItem('tesla_theme', currentTheme);
+        }
+
+        function applyTheme(theme) {
+            const body = document.body;
+            if (theme === 'dark') {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                if (map.hasLayer(lightTiles)) map.removeLayer(lightTiles);
+                darkTiles.addTo(map);
+            } else {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                if (map.hasLayer(darkTiles)) map.removeLayer(darkTiles);
+                lightTiles.addTo(map);
+            }
+        }
+
+        function saveCurrentPinAsFav() {
+            if (!currentDestination) return;
+            const name = prompt('შეიყვანეთ ადგილის სახელი:', 'ახალი ადგილი');
+            if (name && name.trim() !== '') {
+                favorites.push({ name: name.trim(), lat: currentDestination.lat, lng: currentDestination.lng });
+                localStorage.setItem('tesla_favs', JSON.stringify(favorites));
+                renderFavs();
+            }
+        }
+
+        function deleteFav(index, event) {
+            event.stopPropagation();
+            if (confirm(`წავშალოთ "${favorites[index].name}"?`)) {
+                favorites.splice(index, 1);
+                localStorage.setItem('tesla_favs', JSON.stringify(favorites));
+                renderFavs();
+            }
+        }
+
+        function renderFavs() {
+            const list = document.getElementById('favList');
+            list.innerHTML = '';
+            if (favorites.length === 0) { 
+                list.innerHTML = '<div style="color:#777; font-size:12px; padding:6px;">სია ცარიელია</div>'; 
+                return; 
+            }
+            favorites.forEach((f, idx) => {
+                const item = document.createElement('div');
+                item.className = 'fav-item';
+                item.innerHTML = `
+                    <span>📍 ${f.name}</span>
+                    <span class="fav-del-btn" onclick="deleteFav(${idx}, event)">✕</span>
+                `;
+                item.onclick = () => {
+                    currentDestination = L.latLng(f.lat, f.lng);
+                    routingControl.setWaypoints([myLocation, currentDestination]);
+                    toggleFavs();
+                };
+                list.appendChild(item);
+            });
+        }
+
+        function toggleFavs() {
+            const panel = document.getElementById('favPanel');
+            panel.classList.toggle('active');
+            document.getElementById('settingsPanel').classList.remove('active');
+            if (panel.classList.contains('active')) renderFavs();
+        }
+
+        function goToMyLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(pos => {
+                    myLocation = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                    const wps = routingControl.getWaypoints();
+                    wps[0] = { latLng: myLocation };
+                    if (currentDestination) {
+                        wps[1] = { latLng: currentDestination };
+                    }
+                    routingControl.setWaypoints(wps);
+                    map.panTo(myLocation, { animate: true, duration: 0.5 });
+                }, null, { enableHighAccuracy: true });
+            }
+        }
+
+        async function searchLocation() {
+            const q = document.getElementById('searchInput').value;
+            if (!q) return;
+            try {
+                const res = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`;
+                const response = await fetch(res);
+                const data = await response.json();
+                if (data.length > 0) {
+                    currentDestination = L.latLng(data[0].lat, data[0].lon);
+                    routingControl.setWaypoints([myLocation, currentDestination]);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        goToMyLocation();
+    </script>
+</body>
+</html>
