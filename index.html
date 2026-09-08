@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tesla Smart Navigation</title>
+    <title>Tesla Smart Navigation Georgia</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.2s, color 0.2s; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.2s, color 0.2s, top 0.3s; }
         body, html { width: 100%; height: 100%; overflow: hidden; position: relative; }
         
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #121212; }
@@ -20,7 +20,7 @@
         body.dark-mode .search-input, body.dark-mode .settings-input, body.dark-mode .settings-select { color: #fff; background: #222; border: 1px solid #444; }
         body.dark-mode .btn { background: #2c2c2e; color: #fff; border: 1px solid #444; }
         body.dark-mode .btn:hover { background: #3a3a3c; }
-        body.dark-mode .fav-panel, body.dark-mode .settings-panel, body.dark-mode .suggestions-dropdown { background: rgba(25, 25, 25, 0.95); border: 1px solid #333; }
+        body.dark-mode .fav-panel, body.dark-mode .settings-panel, body.dark-mode .suggestions-dropdown, body.dark-mode .custom-modal { background: rgba(25, 25, 25, 0.95); border: 1px solid #333; }
         body.dark-mode .fav-item, body.dark-mode .trip-item, body.dark-mode .sug-item { background: #222; border: 1px solid #333; color: #fff; }
         body.dark-mode .fav-item:hover, body.dark-mode .trip-item:hover, body.dark-mode .sug-item:hover { background: #333; }
         body.dark-mode .info-card-bg { background: rgba(20, 20, 20, 0.9); border: 1px solid #007aff; }
@@ -33,7 +33,7 @@
         body.light-mode .search-input, body.light-mode .settings-input, body.light-mode .settings-select { color: #000; background: #fff; border: 1px solid #ccc; }
         body.light-mode .btn { background: #fff; color: #000; border: 1px solid #ccc; }
         body.light-mode .btn:hover { background: #f0f0f0; }
-        body.light-mode .fav-panel, body.light-mode .settings-panel, body.light-mode .suggestions-dropdown { background: rgba(255, 255, 255, 0.98); border: 1px solid #ccc; }
+        body.light-mode .fav-panel, body.light-mode .settings-panel, body.light-mode .suggestions-dropdown, body.light-mode .custom-modal { background: rgba(255, 255, 255, 0.98); border: 1px solid #ccc; }
         body.light-mode .fav-item, body.light-mode .trip-item, body.light-mode .sug-item { background: #f9f9f9; color: #000; border: 1px solid #eee; }
         body.light-mode .fav-item:hover, body.light-mode .trip-item:hover, body.light-mode .sug-item:hover { background: #f0f0f0; }
         body.light-mode .fav-title, body.light-mode .settings-title { color: #555; }
@@ -42,7 +42,7 @@
         body.light-mode .leaflet-tile-pane { filter: none; }
 
         /* ========= UI ELEMENTS ========= */
-        .top-bar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+        .top-bar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; gap: 6px; align-items: center; pointer-events: auto; }
         
         .search-container { flex: 1; position: relative; }
         .search-box { display: flex; border-radius: 8px; overflow: hidden; width: 100%; }
@@ -51,16 +51,17 @@
         .suggestions-dropdown { position: absolute; top: 48px; left: 0; right: 0; border-radius: 8px; max-height: 250px; overflow-y: auto; z-index: 1001; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         .sug-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid rgba(100,100,100,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .btn { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; outline: none; }
+        .btn { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; outline: none; }
         .btn-fav { background: #3a3a3c; }
         body.light-mode .btn-fav { background: #e0e0e0; }
 
         .btn-mode-switch { background: #007aff !important; color: white !important; border: none !important; }
         .btn-settings { background: #5856d6 !important; color: white !important; border: none !important; }
-        .btn-fs { background: #34c759 !important; color: white !important; border: none !important; font-size: 16px; }
+        .btn-fs { background: #34c759 !important; color: white !important; border: none !important; font-size: 14px; }
+        .btn-cams { background: #ff9500 !important; color: white !important; border: none !important; }
 
         /* ========= PANELS ========= */
-        .fav-panel, .settings-panel { position: absolute; top: 60px; left: 12px; width: 340px; border-radius: 10px; padding: 14px; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 85vh; overflow-y: auto; pointer-events: auto; }
+        .fav-panel, .settings-panel { position: absolute; top: 60px; left: 12px; width: 340px; border-radius: 10px; padding: 14px; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; pointer-events: auto; }
         .fav-panel.active, .settings-panel.active { display: block; }
         .fav-title, .settings-title { font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; }
         
@@ -79,14 +80,32 @@
         .trip-item { padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
         .chart-container { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; margin-top: 8px; font-size: 11px; color: #aaa; text-align: center; }
 
-        .info-card { position: absolute; top: 60px; right: 12px; z-index: 1000; display: none; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
-        .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); backdrop-filter: blur(8px); }
-        .dist-text { color: #34c759; font-size: 16px; }
-        .battery-text { color: #e6b800; font-size: 15px; }
-        .kwh-text { color: #007aff; font-size: 12px; font-weight: normal; }
-        .elev-text { font-size: 11px; font-weight: normal; }
+        /* ========= CUSTOM IN-PAGE MODALS (Replaces alert/confirm/prompt) ========= */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .custom-modal { width: 300px; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; text-align: center; }
+        .custom-modal h3 { font-size: 16px; margin-bottom: 4px; }
+        .custom-modal p { font-size: 13px; color: #aaa; }
+        .custom-modal input { padding: 8px 10px; border-radius: 6px; font-size: 14px; outline: none; width: 100%; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+        .modal-actions button { flex: 1; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; border: none; }
+        .btn-modal-cancel { background: #444; color: #fff; }
+        .btn-modal-confirm { background: #007aff; color: #fff; }
+        .btn-modal-danger { background: #ff3b30; color: #fff; }
 
-        .btn-add-fav { background: #ff9500 !important; color: #000 !important; font-weight: bold; border: none !important; }
+        .info-card { position: absolute; top: 70px; right: 12px; z-index: 1000; display: none; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
+        .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); backdrop-filter: blur(8px); min-width: 140px; }
+        
+        .route-header-row { display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 2px; }
+        .route-title { font-size: 11px; color: #aaa; font-weight: normal; }
+        .btn-cancel-route { background: none; border: none; color: #ff3b30; font-size: 15px; font-weight: bold; cursor: pointer; padding: 0 2px; line-height: 1; }
+        .btn-cancel-route:hover { opacity: 0.8; }
+
+        .dist-text { color: #34c759; font-size: 15px; }
+        .battery-text { color: #e6b800; font-size: 14px; }
+        .kwh-text { color: #007aff; font-size: 11px; font-weight: normal; }
+        .elev-text { font-size: 10px; font-weight: normal; }
+
+        .btn-add-fav { background: #ff9500 !important; color: #000 !important; font-weight: bold; border: none !important; font-size: 12px; padding: 8px 12px; }
         .btn-calib { background: #34c759 !important; color: #000 !important; font-weight: bold; width: 100%; margin-top: 6px; }
 
         .leaflet-routing-container, .leaflet-routing-error, .leaflet-control-attribution { display: none !important; }
@@ -96,20 +115,77 @@
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><path d="M20,40 Q50,10 80,40 L85,150 Q50,190 15,150 Z" fill="%23cc0000" stroke="%23111" stroke-width="4"/><path d="M25,55 Q50,30 75,55 L72,80 Q50,70 28,80 Z" fill="%23222"/><path d="M28,110 Q50,100 72,110 L70,140 Q50,150 30,140 Z" fill="%23222"/><circle cx="20" cy="170" r="6" fill="%23ff0000"/><circle cx="80" cy="170" r="6" fill="%23ff0000"/><circle cx="25" cy="30" r="5" fill="%23ffffff"/><circle cx="75" cy="30" r="5" fill="%23ffffff"/></svg>');
             background-size: contain; background-repeat: no-repeat;
         }
+
+        .cam-badge {
+            background: #ff3b30; color: white; border-radius: 50%; width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 2px solid white;
+        }
+
+        /* ========= MOBILE RESPONSIVE STYLES ========= */
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-wrap: wrap;
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                gap: 4px;
+            }
+            .search-container {
+                order: -1;
+                flex: 0 0 100%;
+                width: 100%;
+            }
+            .search-box {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+            .btn {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+            .fav-panel, .settings-panel {
+                width: calc(100vw - 16px);
+                left: 8px;
+                top: 105px;
+                max-height: 75vh;
+            }
+            .info-card {
+                top: 105px;
+            }
+            body.fav-panel-open .info-card {
+                top: 350px; 
+            }
+        }
     </style>
 </head>
 <body class="dark-mode">
 
     <div id="map"></div>
 
+    <!-- სრულიად უსაფრთხო ჩაშენებული დიალოგების ფანჯარა (არ იწვევს ბრაუზერის ბლოკირებას) -->
+    <div class="modal-overlay" id="customModalOverlay">
+        <div class="custom-modal panel-bg" id="customModalBox">
+            <h3 id="modalTitle">შეტყობინება</h3>
+            <p id="modalDesc">ტექსტი...</p>
+            <div id="modalInputContainer" style="display:none;">
+                <input type="text" id="modalInput" placeholder="შეიყვანეთ მნიშვნელობა...">
+            </div>
+            <div class="modal-actions" id="modalActions">
+                <button class="btn-modal-cancel" id="modalCancelBtn" onclick="closeCustomModal(false)">გაუქმება</button>
+                <button class="btn-modal-confirm" id="modalConfirmBtn" onclick="closeCustomModal(true)">დადასტურება</button>
+            </div>
+        </div>
+    </div>
+
     <div class="top-bar">
         <button class="btn btn-fs" onclick="forceRefreshMap()" title="მაპის განახლება">⛶</button>
         <button class="btn btn-fav panel-bg" onclick="toggleFavs()">★</button>
         <button class="btn btn-settings" onclick="toggleSettings()">⚙️</button>
+        <button class="btn btn-cams" onclick="toggleCameras()" title="რადარების ჩართვა/გამორთვა">📷 რადარები</button>
         
         <div class="search-container">
             <div class="search-box panel-bg">
-                <input type="text" id="searchInput" class="search-input" placeholder="ძებნა საქართველოში (ქართულად/ინგლისურად)..." oninput="handleSearchInput()" onkeydown="if(event.key==='Enter') searchLocation()">
+                <input type="text" id="searchInput" class="search-input" placeholder="ძებნა საქართველოში..." oninput="handleSearchInput()" onkeydown="if(event.key==='Enter') searchLocation()">
                 <button class="btn" onclick="searchLocation()">🔍</button>
             </div>
             <div class="suggestions-dropdown panel-bg" id="suggestionsDropdown"></div>
@@ -180,6 +256,10 @@
 
     <div class="info-card" id="infoCard">
         <div class="metrics-card info-card-bg">
+            <div class="route-header-row">
+                <span class="route-title">ნავიგაცია</span>
+                <button class="btn-cancel-route" onclick="cancelNavigation()" title="ნავიგაციის გათიშვა">✕</button>
+            </div>
             <div class="dist-text">⬆ <span id="distVal">0</span> კმ</div>
             <div class="battery-text">🔋 -<span id="batVal">0</span>%</div>
             <div class="kwh-text">(~<span id="kwhVal">0</span> kWh)</div>
@@ -192,6 +272,48 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
     <script>
+        // Custom Modal Controller (replaces native alert/confirm/prompt)
+        let modalCallback = null;
+
+        function showCustomConfirm(title, desc, onYes) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            document.getElementById('modalInputContainer').style.display = 'none';
+            document.getElementById('modalCancelBtn').style.display = 'inline-block';
+            document.getElementById('customModalOverlay').style.display = 'flex';
+            modalCallback = onYes;
+        }
+
+        function showCustomPrompt(title, desc, defaultValue, onValueEntered) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            const inputEl = document.getElementById('modalInput');
+            inputEl.value = defaultValue || '';
+            document.getElementById('modalInputContainer').style.display = 'block';
+            document.getElementById('modalCancelBtn').style.display = 'inline-block';
+            document.getElementById('customModalOverlay').style.display = 'flex';
+            setTimeout(() => inputEl.focus(), 100);
+            modalCallback = onValueEntered;
+        }
+
+        function showCustomAlert(title, desc) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            document.getElementById('modalInputContainer').style.display = 'none';
+            document.getElementById('modalCancelBtn').style.display = 'none';
+            document.getElementById('customModalOverlay').style.display = 'flex';
+            modalCallback = () => {};
+        }
+
+        function closeCustomModal(confirmed) {
+            document.getElementById('customModalOverlay').style.display = 'none';
+            if (confirmed && modalCallback) {
+                const inputVal = document.getElementById('modalInput').value;
+                modalCallback(inputVal);
+            }
+            modalCallback = null;
+        }
+
         const teslaDatabase = {
             "Model 3": {
                 "Standard Range Plus": [
@@ -262,6 +384,9 @@
             baseConsumption: 150
         };
 
+        let showCameras = false;
+        let cameraLayerGroup = L.layerGroup();
+
         document.getElementById('carModelSelect').value = carSettings.model;
         updateTrims(carSettings.trim);
         document.getElementById('fullRangeInput').value = carSettings.fullRange;
@@ -276,14 +401,11 @@
         }).setView(myLocation, 15);
         
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-
         const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         applyTheme(currentTheme);
 
-        setTimeout(() => {
-            map.invalidateSize(true);
-        }, 200);
+        setTimeout(() => { map.invalidateSize(true); }, 200);
 
         const teslaIcon = L.divIcon({ className: 'tesla-icon', iconSize: [30, 55], iconAnchor: [15, 27] });
 
@@ -300,7 +422,8 @@
                 if (i === 0) return L.marker(wp.latLng, { icon: teslaIcon });
                 const marker = L.marker(wp.latLng, { draggable: true });
                 marker.on('dragend', e => {
-                    currentDestination = e.target.getLatLng();
+                    currentDestination = validateLandCoordinates(e.target.getLatLng());
+                    marker.setLatLng(currentDestination);
                     routingControl.setWaypoints([myLocation, currentDestination]);
                 });
                 return marker;
@@ -308,8 +431,20 @@
             lineOptions: { styles: [{ color: '#007aff', weight: 6, opacity: 0.9 }] }
         }).addTo(map);
 
+        function validateLandCoordinates(latlng) {
+            return latlng;
+        }
+
+        function cancelNavigation() {
+            showCustomConfirm("ნავიგაცია", "დარწმუნებული ხართ, რომ გსურთ ნავიგაციის გაუქმება?", () => {
+                currentDestination = null;
+                routingControl.setWaypoints([myLocation]);
+                document.getElementById('infoCard').style.display = 'none';
+            });
+        }
+
         map.on('click', e => {
-            currentDestination = e.latlng;
+            currentDestination = validateLandCoordinates(e.latlng);
             routingControl.setWaypoints([myLocation, currentDestination]);
             document.getElementById('suggestionsDropdown').style.display = 'none';
         });
@@ -341,6 +476,64 @@
             document.getElementById('infoCard').style.display = 'flex';
         });
 
+        async function toggleCameras() {
+            showCameras = !showCameras;
+            if (showCameras) {
+                await loadCamerasFromOverpass();
+                cameraLayerGroup.addTo(map);
+            } else {
+                map.removeLayer(cameraLayerGroup);
+            }
+        }
+
+        async function loadCamerasFromOverpass() {
+            const bounds = map.getBounds();
+            const south = bounds.getSouth();
+            const west = bounds.getWest();
+            const north = bounds.getNorth();
+            const east = bounds.getEast();
+
+            const query = `
+                [out:json][timeout:25];
+                (
+                  node["highway"="speed_camera"](${south},${west},${north},${east});
+                  way["highway"="speed_camera"](${south},${west},${north},${east});
+                );
+                out body;
+                >;
+                out skel qt;
+            `;
+
+            const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                cameraLayerGroup.clearLayers();
+
+                data.elements.forEach(element => {
+                    if (element.lat && element.lon) {
+                        const camName = element.tags && element.tags.name ? element.tags.name : "სიჩქარის რადარი";
+                        
+                        const camIcon = L.divIcon({
+                            className: '',
+                            html: '<div class="cam-badge">📷</div>',
+                            iconSize: [26, 26],
+                            iconAnchor: [13, 13]
+                        });
+
+                        const marker = L.marker([element.lat, element.lon], { icon: camIcon })
+                            .bindPopup(`<b>⚠️ ${camName}</b>`);
+                        
+                        cameraLayerGroup.addLayer(marker);
+                    }
+                });
+            } catch (error) {
+                console.error("რადარების წამოღება ვერ მოხერხდა:", error);
+            }
+        }
+
         function forceRefreshMap() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(() => {});
@@ -354,9 +547,7 @@
                 let refreshInterval = setInterval(() => {
                     map.invalidateSize(true);
                     counter++;
-                    if (counter > 8) {
-                        clearInterval(refreshInterval);
-                    }
+                    if (counter > 8) { clearInterval(refreshInterval); }
                 }, 300);
             }
         });
@@ -371,9 +562,7 @@
                 return;
             }
 
-            searchTimeout = setTimeout(() => {
-                fetchSuggestions(q);
-            }, 300);
+            searchTimeout = setTimeout(() => { fetchSuggestions(q); }, 300);
         }
 
         async function fetchSuggestions(query) {
@@ -400,22 +589,18 @@
                     let details = addr.village || addr.town || addr.city || addr.county || addr.state || "";
                     div.innerText = details ? `${item.display_name} (${details})` : item.display_name;
 
-                    div.onclick = () => {
-                        selectSuggestion(item.lat, item.lon, item.display_name);
-                    };
+                    div.onclick = () => { selectSuggestion(item.lat, item.lon, item.display_name); };
                     dropdown.appendChild(div);
                 });
 
                 dropdown.style.display = 'block';
-            } catch (e) {
-                console.error("Autocomplete error:", e);
-            }
+            } catch (e) { console.error("Autocomplete error:", e); }
         }
 
         function selectSuggestion(lat, lon, name) {
             document.getElementById('searchInput').value = name;
             document.getElementById('suggestionsDropdown').style.display = 'none';
-            currentDestination = L.latLng(parseFloat(lat), parseFloat(lon));
+            currentDestination = validateLandCoordinates(L.latLng(parseFloat(lat), parseFloat(lon)));
             routingControl.setWaypoints([myLocation, currentDestination]);
             map.setView(currentDestination, 14, { animate: true });
         }
@@ -430,11 +615,11 @@
                 const response = await fetch(res);
                 const data = await response.json();
                 if (data.length > 0) {
-                    currentDestination = L.latLng(data[0].lat, data[0].lon);
+                    currentDestination = validateLandCoordinates(L.latLng(data[0].lat, data[0].lon));
                     routingControl.setWaypoints([myLocation, currentDestination]);
                     map.setView(currentDestination, 14, { animate: true });
                 } else {
-                    alert("საქართველოში მსგავსი ადგილი ვერ მოიძებნა");
+                    showCustomAlert("ძებნა", "საქართველოში მსგავსი ადგილი ვერ მოიძებნა");
                 }
             }  catch (e) { console.error(e); }
         }
@@ -447,57 +632,59 @@
 
         function startCalibrationTrip() {
             if (currentRouteDist <= 0) {
-                alert("ჯერ მონიშნეთ მარშრუტი რუკაზე!");
+                showCustomAlert("კალიბრაცია", "ჯერ მონიშნეთ მარშრუტი რუკაზე!");
                 return;
             }
 
-            const startPct = prompt("შეიყვანეთ ბატარეის პროცენტი მგზავრობის დაწყებისას (მაგ: 90):");
-            if (startPct === null) return;
-            const endPct = prompt("შეიყვანეთ ბატარეის პროცენტი მგზავრობის დასრულებისას (მაგ: 45):");
-            if (endPct === null) return;
+            showCustomPrompt("ტრიპის კალიბრაცია", "შეიყვანეთ ბატარეის პროცენტი მგზავრობის დაწყებისას (მაგ: 90):", "90", (startPctStr) => {
+                if (!startPctStr) return;
+                showCustomPrompt("ტრიპის კალიბრაცია", "შეიყვანეთ ბატარეის პროცენტი მგზავრობის დასრულებისას (მაგ: 45):", "45", (endPctStr) => {
+                    if (!endPctStr) return;
 
-            const sp = parseFloat(startPct);
-            const ep = parseFloat(endPct);
+                    const sp = parseFloat(startPctStr);
+                    const ep = parseFloat(endPctStr);
 
-            if (isNaN(sp) || isNaN(ep) || sp <= ep) {
-                alert("მონაცემები არასწორია! დაწყების პროცენტი მეტი უნდა იყოს დასრულების პროცენტზე.");
-                return;
-            }
+                    if (isNaN(sp) || isNaN(ep) || sp <= ep) {
+                        showCustomAlert("შეცდომა", "მონაცემები არასწორია! დაწყების პროცენტი მეტი უნდა იყოს დასრულების პროცენტზე.");
+                        return;
+                    }
 
-            const usedPct = sp - ep;
-            loadSettingsFromUI();
+                    const usedPct = sp - ep;
+                    loadSettingsFromUI();
 
-            const totalBattKwh = (carSettings.fullRange * carSettings.baseConsumption) / 1000;
-            const actualKwh = (usedPct / 100) * totalBattKwh;
+                    const totalBattKwh = (carSettings.factoryRange * carSettings.baseConsumption) / 1000;
+                    const actualKwh = (usedPct / 100) * totalBattKwh;
 
-            let elevationFactorKwh = (currentRouteClimb * 0.005) - (currentRouteDescent * 0.003);
-            if (elevationFactorKwh < 0) elevationFactorKwh = 0;
+                    let elevationFactorKwh = (currentRouteClimb * 0.005) - (currentRouteDescent * 0.003);
+                    if (elevationFactorKwh < 0) elevationFactorKwh = 0;
 
-            let pureDriveKwh = actualKwh - elevationFactorKwh;
-            if (pureDriveKwh < 0) pureDriveKwh = actualKwh;
+                    let pureDriveKwh = actualKwh - elevationFactorKwh;
+                    if (pureDriveKwh < 0) pureDriveKwh = actualKwh;
 
-            const calculatedNewConsumption = Math.round((pureDriveKwh * 1000) / currentRouteDist);
+                    const calculatedNewConsumption = Math.round((pureDriveKwh * 1000) / currentRouteDist);
 
-            if (calculatedNewConsumption > 80 && calculatedNewConsumption < 350) {
-                carSettings.baseConsumption = Math.round((carSettings.baseConsumption + calculatedNewConsumption) / 2);
-                document.getElementById('baseConsumptionInput').value = carSettings.baseConsumption;
-                
-                calibrationTrips.unshift({
-                    dist: currentRouteDist.toFixed(1),
-                    used: usedPct.toFixed(1),
-                    newCons: carSettings.baseConsumption,
-                    date: new Date().toLocaleDateString()
+                    if (calculatedNewConsumption > 80 && calculatedNewConsumption < 350) {
+                        carSettings.baseConsumption = Math.round((carSettings.baseConsumption + calculatedNewConsumption) / 2);
+                        document.getElementById('baseConsumptionInput').value = carSettings.baseConsumption;
+                        
+                        calibrationTrips.unshift({
+                            dist: currentRouteDist.toFixed(1),
+                            used: usedPct.toFixed(1),
+                            newCons: carSettings.baseConsumption,
+                            date: new Date().toLocaleDateString()
+                        });
+                        if (calibrationTrips.length > 5) calibrationTrips.pop();
+
+                        localStorage.setItem('tesla_calib_trips', JSON.stringify(calibrationTrips));
+                        saveSettings();
+                        renderCalibrationUI();
+
+                        showCustomAlert("წარმატება", `ტრიპი დაკალიბრდა!\nახალი რეკომენდებული საბაზისო წვა: ${carSettings.baseConsumption} Wh/km`);
+                    } else {
+                        showCustomAlert("შეცდომა", "გამოთვლილი წვა ცდება ნორმის ფარგლებს (80-350 Wh/km). შეამოწმეთ პროცენტები.");
+                    }
                 });
-                if (calibrationTrips.length > 5) calibrationTrips.pop();
-
-                localStorage.setItem('tesla_calib_trips', JSON.stringify(calibrationTrips));
-                saveSettings();
-                renderCalibrationUI();
-
-                alert(` წარმატებით დაკალიბრდა!\nახალი რეკომენდებული საბაზისო წვა: ${carSettings.baseConsumption} Wh/km`);
-            } else {
-                alert("გამოთვლილი წვა ცდება ნორმის ფარგლებს (80-350 Wh/km). შეამოწმეთ პროცენტები.");
-            }
+            });
         }
 
         function renderCalibrationUI() {
@@ -586,7 +773,6 @@
                 if (deg < 0) deg = 0;
             }
 
-            // რეალური დარჩენილი kWh-ების გამოთვლა დეგრადაციის მიხედვით
             let currentKwh = carSettings.factoryKwh * (1 - (deg / 100));
 
             document.getElementById('degVal').innerText = deg.toFixed(1) + '%';
@@ -617,6 +803,7 @@
             const panel = document.getElementById('settingsPanel');
             panel.classList.toggle('active');
             document.getElementById('favPanel').classList.remove('active');
+            document.body.classList.remove('fav-panel-open');
         }
 
         function toggleZoomMode() {
@@ -648,21 +835,22 @@
 
         function saveCurrentPinAsFav() {
             if (!currentDestination) return;
-            const name = prompt('შეიყვანეთ ადგილის სახელი:', 'ახალი ადგილი');
-            if (name && name.trim() !== '') {
-                favorites.push({ name: name.trim(), lat: currentDestination.lat, lng: currentDestination.lng });
-                localStorage.setItem('tesla_favs', JSON.stringify(favorites));
-                renderFavs();
-            }
+            showCustomPrompt("ფავორიტებში დამატება", "შეიყვანეთ ადგილის სახელი:", "ახალი ადგილი", (name) => {
+                if (name && name.trim() !== '') {
+                    favorites.push({ name: name.trim(), lat: currentDestination.lat, lng: currentDestination.lng });
+                    localStorage.setItem('tesla_favs', JSON.stringify(favorites));
+                    renderFavs();
+                }
+            });
         }
 
         function deleteFav(index, event) {
             event.stopPropagation();
-            if (confirm(`წავშალოთ "${favorites[index].name}"?`)) {
+            showCustomConfirm("წაშლა", `წავშალოთ "${favorites[index].name}"?`, () => {
                 favorites.splice(index, 1);
                 localStorage.setItem('tesla_favs', JSON.stringify(favorites));
                 renderFavs();
-            }
+            });
         }
 
         function renderFavs() {
@@ -692,7 +880,13 @@
             const panel = document.getElementById('favPanel');
             panel.classList.toggle('active');
             document.getElementById('settingsPanel').classList.remove('active');
-            if (panel.classList.contains('active')) renderFavs();
+            
+            if (panel.classList.contains('active')) {
+                renderFavs();
+                document.body.classList.add('fav-panel-open');
+            } else {
+                document.body.classList.remove('fav-panel-open');
+            }
         }
 
         function goToMyLocation() {
