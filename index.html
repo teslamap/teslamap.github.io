@@ -70,6 +70,7 @@
 
         .degradation-box { background: rgba(0, 122, 255, 0.1); border: 1px solid #007aff; border-radius: 6px; padding: 8px; font-size: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
         .deg-val { color: #ff9500; font-weight: bold; }
+        .kwh-val-badge { color: #007aff; font-weight: bold; }
 
         .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .fav-del-btn { color: #ff3b30; font-weight: bold; padding: 2px 6px; margin-left: 8px; }
@@ -157,7 +158,8 @@
         </div>
 
         <div class="degradation-box">
-            <div>ქარხნული ახალი გარბენი: <span id="factoryRangeVal">386</span> კმ</div>
+            <div>ქარხნული ახალი გარბენი: <span id="factoryRangeVal">386</span> კმ (<span id="factoryKwhVal" class="kwh-val-badge">--</span> kWh)</div>
+            <div>ფაქტობრივი მოცულობა: <span id="currentKwhVal" class="kwh-val-badge">--</span> kWh</div>
             <div>ბატარეის დეგრადაცია: <span id="degVal" class="deg-val">0.0%</span></div>
         </div>
 
@@ -193,47 +195,47 @@
         const teslaDatabase = {
             "Model 3": {
                 "Standard Range Plus": [
-                    { name: "Panasonic NCA (50 kWh)", factoryRange: 386 },
-                    { name: "CATL LFP (55 kWh)", factoryRange: 423 }
+                    { name: "Panasonic NCA (50 kWh)", factoryRange: 386, nominalKwh: 50 },
+                    { name: "CATL LFP (55 kWh)", factoryRange: 423, nominalKwh: 55 }
                 ],
                 "Rear-Wheel Drive (LFP)": [
-                    { name: "CATL LFP 60kWh", factoryRange: 438 },
-                    { name: "CATL LFP 57.5kWh", factoryRange: 430 }
+                    { name: "CATL LFP 60kWh", factoryRange: 438, nominalKwh: 60 },
+                    { name: "CATL LFP 57.5kWh", factoryRange: 430, nominalKwh: 57.5 }
                 ],
                 "Long Range AWD": [
-                    { name: "LG NMC (75 kWh)", factoryRange: 568 },
-                    { name: "Panasonic NCA (75 kWh)", factoryRange: 580 }
+                    { name: "LG NMC (75 kWh)", factoryRange: 568, nominalKwh: 75 },
+                    { name: "Panasonic NCA (75 kWh)", factoryRange: 580, nominalKwh: 75 }
                 ],
                 "Performance": [
-                    { name: "Panasonic NCA (75 kWh)", factoryRange: 507 }
+                    { name: "Panasonic NCA (75 kWh)", factoryRange: 507, nominalKwh: 75 }
                 ]
             },
             "Model Y": {
                 "Standard Range": [
-                    { name: "CATL LFP (60 kWh)", factoryRange: 395 }
+                    { name: "CATL LFP (60 kWh)", factoryRange: 395, nominalKwh: 60 }
                 ],
                 "Long Range AWD": [
-                    { name: "LG NMC (78 kWh)", factoryRange: 533 },
-                    { name: "Panasonic NCA (78 kWh)", factoryRange: 525 }
+                    { name: "LG NMC (78 kWh)", factoryRange: 533, nominalKwh: 78 },
+                    { name: "Panasonic NCA (78 kWh)", factoryRange: 525, nominalKwh: 78 }
                 ],
                 "Performance": [
-                    { name: "Panasonic NCA (78 kWh)", factoryRange: 488 }
+                    { name: "Panasonic NCA (78 kWh)", factoryRange: 488, nominalKwh: 78 }
                 ]
             },
             "Model S": {
                 "Long Range": [
-                    { name: "Panasonic NCA (100 kWh)", factoryRange: 652 }
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 652, nominalKwh: 100 }
                 ],
                 "Plaid": [
-                    { name: "Panasonic NCA (100 kWh)", factoryRange: 637 }
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 637, nominalKwh: 100 }
                 ]
             },
             "Model X": {
                 "Long Range": [
-                    { name: "Panasonic NCA (100 kWh)", factoryRange: 560 }
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 560, nominalKwh: 100 }
                 ],
                 "Plaid": [
-                    { name: "Panasonic NCA (100 kWh)", factoryRange: 536 }
+                    { name: "Panasonic NCA (100 kWh)", factoryRange: 536, nominalKwh: 100 }
                 ]
             }
         };
@@ -255,6 +257,7 @@
             trim: "Standard Range Plus",
             battery: "Panasonic NCA (50 kWh)",
             factoryRange: 386,
+            factoryKwh: 50,
             fullRange: 325,
             baseConsumption: 150
         };
@@ -548,6 +551,7 @@
                 const opt = document.createElement('option');
                 opt.value = b.name;
                 opt.setAttribute('data-range', b.factoryRange);
+                opt.setAttribute('data-kwh', b.nominalKwh);
                 opt.innerText = `${b.name} (${b.factoryRange} კმ ახალი)`;
                 battSelect.appendChild(opt);
             });
@@ -563,8 +567,13 @@
             const selectedOpt = battSelect.options[battSelect.selectedIndex];
             if (selectedOpt) {
                 const factoryRange = parseFloat(selectedOpt.getAttribute('data-range'));
+                const nominalKwh = parseFloat(selectedOpt.getAttribute('data-kwh'));
+                
                 document.getElementById('factoryRangeVal').innerText = factoryRange;
+                document.getElementById('factoryKwhVal').innerText = nominalKwh;
+                
                 carSettings.factoryRange = factoryRange;
+                carSettings.factoryKwh = nominalKwh;
             }
             calculateDegradation();
         }
@@ -576,7 +585,13 @@
                 deg = ((carSettings.factoryRange - carSettings.fullRange) / carSettings.factoryRange) * 100;
                 if (deg < 0) deg = 0;
             }
+
+            // რეალური დარჩენილი kWh-ების გამოთვლა დეგრადაციის მიხედვით
+            let currentKwh = carSettings.factoryKwh * (1 - (deg / 100));
+
             document.getElementById('degVal').innerText = deg.toFixed(1) + '%';
+            document.getElementById('currentKwhVal').innerText = currentKwh.toFixed(1);
+
             saveSettings();
         }
 
@@ -594,6 +609,7 @@
             carSettings.battery = document.getElementById('carBatterySelect').value;
             carSettings.fullRange = parseFloat(document.getElementById('fullRangeInput').value) || 325;
             carSettings.factoryRange = parseFloat(document.getElementById('factoryRangeVal').innerText) || 386;
+            carSettings.factoryKwh = parseFloat(document.getElementById('factoryKwhVal').innerText) || 50;
             carSettings.baseConsumption = parseFloat(document.getElementById('baseConsumptionInput').value) || 150;
         }
 
