@@ -58,7 +58,6 @@
         .btn-mode-switch { background: #007aff !important; color: white !important; border: none !important; }
         .btn-settings { background: #5856d6 !important; color: white !important; border: none !important; }
         .btn-fs { background: #34c759 !important; color: white !important; border: none !important; font-size: 14px; }
-        .btn-cams { background: #ff9500 !important; color: white !important; border: none !important; }
 
         /* ========= PANELS ========= */
         .fav-panel, .settings-panel { position: absolute; top: 60px; left: 12px; width: 340px; border-radius: 10px; padding: 14px; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; pointer-events: auto; }
@@ -80,7 +79,7 @@
         .trip-item { padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
         .chart-container { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; margin-top: 8px; font-size: 11px; color: #aaa; text-align: center; }
 
-        /* ========= CUSTOM IN-PAGE MODALS (Replaces alert/confirm/prompt) ========= */
+        /* ========= CUSTOM IN-PAGE MODALS ========= */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .custom-modal { width: 300px; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; text-align: center; }
         .custom-modal h3 { font-size: 16px; margin-bottom: 4px; }
@@ -90,7 +89,6 @@
         .modal-actions button { flex: 1; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; border: none; }
         .btn-modal-cancel { background: #444; color: #fff; }
         .btn-modal-confirm { background: #007aff; color: #fff; }
-        .btn-modal-danger { background: #ff3b30; color: #fff; }
 
         .info-card { position: absolute; top: 70px; right: 12px; z-index: 1000; display: none; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
         .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); backdrop-filter: blur(8px); min-width: 140px; }
@@ -114,12 +112,6 @@
             width: 30px; height: 55px;
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><path d="M20,40 Q50,10 80,40 L85,150 Q50,190 15,150 Z" fill="%23cc0000" stroke="%23111" stroke-width="4"/><path d="M25,55 Q50,30 75,55 L72,80 Q50,70 28,80 Z" fill="%23222"/><path d="M28,110 Q50,100 72,110 L70,140 Q50,150 30,140 Z" fill="%23222"/><circle cx="20" cy="170" r="6" fill="%23ff0000"/><circle cx="80" cy="170" r="6" fill="%23ff0000"/><circle cx="25" cy="30" r="5" fill="%23ffffff"/><circle cx="75" cy="30" r="5" fill="%23ffffff"/></svg>');
             background-size: contain; background-repeat: no-repeat;
-        }
-
-        .cam-badge {
-            background: #ff3b30; color: white; border-radius: 50%; width: 26px; height: 26px;
-            display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 2px solid white;
         }
 
         /* ========= MOBILE RESPONSIVE STYLES ========= */
@@ -162,7 +154,6 @@
 
     <div id="map"></div>
 
-    <!-- სრულიად უსაფრთხო ჩაშენებული დიალოგების ფანჯარა (არ იწვევს ბრაუზერის ბლოკირებას) -->
     <div class="modal-overlay" id="customModalOverlay">
         <div class="custom-modal panel-bg" id="customModalBox">
             <h3 id="modalTitle">შეტყობინება</h3>
@@ -181,7 +172,6 @@
         <button class="btn btn-fs" onclick="forceRefreshMap()" title="მაპის განახლება">⛶</button>
         <button class="btn btn-fav panel-bg" onclick="toggleFavs()">★</button>
         <button class="btn btn-settings" onclick="toggleSettings()">⚙️</button>
-        <button class="btn btn-cams" onclick="toggleCameras()" title="რადარების ჩართვა/გამორთვა">📷 რადარები</button>
         
         <div class="search-container">
             <div class="search-box panel-bg">
@@ -272,7 +262,6 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // Custom Modal Controller (replaces native alert/confirm/prompt)
         let modalCallback = null;
 
         function showCustomConfirm(title, desc, onYes) {
@@ -384,9 +373,6 @@
             baseConsumption: 150
         };
 
-        let showCameras = false;
-        let cameraLayerGroup = L.layerGroup();
-
         document.getElementById('carModelSelect').value = carSettings.model;
         updateTrims(carSettings.trim);
         document.getElementById('fullRangeInput').value = carSettings.fullRange;
@@ -475,64 +461,6 @@
 
             document.getElementById('infoCard').style.display = 'flex';
         });
-
-        async function toggleCameras() {
-            showCameras = !showCameras;
-            if (showCameras) {
-                await loadCamerasFromOverpass();
-                cameraLayerGroup.addTo(map);
-            } else {
-                map.removeLayer(cameraLayerGroup);
-            }
-        }
-
-        async function loadCamerasFromOverpass() {
-            const bounds = map.getBounds();
-            const south = bounds.getSouth();
-            const west = bounds.getWest();
-            const north = bounds.getNorth();
-            const east = bounds.getEast();
-
-            const query = `
-                [out:json][timeout:25];
-                (
-                  node["highway"="speed_camera"](${south},${west},${north},${east});
-                  way["highway"="speed_camera"](${south},${west},${north},${east});
-                );
-                out body;
-                >;
-                out skel qt;
-            `;
-
-            const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                cameraLayerGroup.clearLayers();
-
-                data.elements.forEach(element => {
-                    if (element.lat && element.lon) {
-                        const camName = element.tags && element.tags.name ? element.tags.name : "სიჩქარის რადარი";
-                        
-                        const camIcon = L.divIcon({
-                            className: '',
-                            html: '<div class="cam-badge">📷</div>',
-                            iconSize: [26, 26],
-                            iconAnchor: [13, 13]
-                        });
-
-                        const marker = L.marker([element.lat, element.lon], { icon: camIcon })
-                            .bindPopup(`<b>⚠️ ${camName}</b>`);
-                        
-                        cameraLayerGroup.addLayer(marker);
-                    }
-                });
-            } catch (error) {
-                console.error("რადარების წამოღება ვერ მოხერხდა:", error);
-            }
-        }
 
         function forceRefreshMap() {
             if (!document.fullscreenElement) {
