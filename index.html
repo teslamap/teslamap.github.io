@@ -12,7 +12,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.2s, color 0.2s; }
         body, html { width: 100%; height: 100%; overflow: hidden; position: relative; }
         
-        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #111; }
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #121212; }
 
         /* ========= DARK MODE ========= */
         body.dark-mode { background: #121212; color: #fff; }
@@ -20,10 +20,12 @@
         body.dark-mode .search-input, body.dark-mode .settings-input, body.dark-mode .settings-select { color: #fff; background: #222; border: 1px solid #444; }
         body.dark-mode .btn { background: #2c2c2e; color: #fff; border: 1px solid #444; }
         body.dark-mode .btn:hover { background: #3a3a3c; }
-        body.dark-mode .fav-panel, body.dark-mode .settings-panel { background: rgba(25, 25, 25, 0.95); border: 1px solid #333; }
-        body.dark-mode .fav-item, body.dark-mode .trip-item { background: #222; border: 1px solid #333; }
-        body.dark-mode .fav-item:hover, body.dark-mode .trip-item:hover { background: #333; }
+        body.dark-mode .fav-panel, body.dark-mode .settings-panel, body.dark-mode .suggestions-dropdown { background: rgba(25, 25, 25, 0.95); border: 1px solid #333; }
+        body.dark-mode .fav-item, body.dark-mode .trip-item, body.dark-mode .sug-item { background: #222; border: 1px solid #333; color: #fff; }
+        body.dark-mode .fav-item:hover, body.dark-mode .trip-item:hover, body.dark-mode .sug-item:hover { background: #333; }
         body.dark-mode .info-card-bg { background: rgba(20, 20, 20, 0.9); border: 1px solid #007aff; }
+        body.dark-mode .elev-text { color: #aaa; }
+        body.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
 
         /* ========= LIGHT MODE ========= */
         body.light-mode { background: #f4f4f7; color: #000; }
@@ -31,22 +33,31 @@
         body.light-mode .search-input, body.light-mode .settings-input, body.light-mode .settings-select { color: #000; background: #fff; border: 1px solid #ccc; }
         body.light-mode .btn { background: #fff; color: #000; border: 1px solid #ccc; }
         body.light-mode .btn:hover { background: #f0f0f0; }
-        body.light-mode .fav-panel, body.light-mode .settings-panel { background: rgba(255, 255, 255, 0.98); border: 1px solid #ccc; }
-        body.light-mode .fav-item, body.light-mode .trip-item { background: #f9f9f9; color: #000; border: 1px solid #eee; }
-        body.light-mode .fav-item:hover, body.light-mode .trip-item:hover { background: #f0f0f0; }
+        body.light-mode .fav-panel, body.light-mode .settings-panel, body.light-mode .suggestions-dropdown { background: rgba(255, 255, 255, 0.98); border: 1px solid #ccc; }
+        body.light-mode .fav-item, body.light-mode .trip-item, body.light-mode .sug-item { background: #f9f9f9; color: #000; border: 1px solid #eee; }
+        body.light-mode .fav-item:hover, body.light-mode .trip-item:hover, body.light-mode .sug-item:hover { background: #f0f0f0; }
         body.light-mode .fav-title, body.light-mode .settings-title { color: #555; }
+        body.light-mode .info-card-bg { background: rgba(255, 255, 255, 0.95); border: 1px solid #007aff; }
+        body.light-mode .elev-text { color: #555; }
+        body.light-mode .leaflet-tile-pane { filter: none; }
 
         /* ========= UI ELEMENTS ========= */
         .top-bar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; gap: 8px; align-items: center; pointer-events: auto; }
-        .search-box { flex: 1; display: flex; border-radius: 8px; overflow: hidden; }
+        
+        .search-container { flex: 1; position: relative; }
+        .search-box { display: flex; border-radius: 8px; overflow: hidden; width: 100%; }
         .search-input { flex: 1; background: transparent; border: none; padding: 10px 12px; font-size: 14px; outline: none; }
         
+        .suggestions-dropdown { position: absolute; top: 48px; left: 0; right: 0; border-radius: 8px; max-height: 250px; overflow-y: auto; z-index: 1001; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .sug-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid rgba(100,100,100,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         .btn { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; outline: none; }
         .btn-fav { background: #3a3a3c; }
         body.light-mode .btn-fav { background: #e0e0e0; }
 
         .btn-mode-switch { background: #007aff !important; color: white !important; border: none !important; }
         .btn-settings { background: #5856d6 !important; color: white !important; border: none !important; }
+        .btn-fs { background: #34c759 !important; color: white !important; border: none !important; font-size: 16px; }
 
         /* ========= PANELS ========= */
         .fav-panel, .settings-panel { position: absolute; top: 60px; left: 12px; width: 340px; border-radius: 10px; padding: 14px; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 85vh; overflow-y: auto; pointer-events: auto; }
@@ -63,18 +74,16 @@
         .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .fav-del-btn { color: #ff3b30; font-weight: bold; padding: 2px 6px; margin-left: 8px; }
 
-        /* ========= CALIBRATION SECTION ========= */
         .calib-section { margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px; }
         .trip-item { padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
         .chart-container { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; margin-top: 8px; font-size: 11px; color: #aaa; text-align: center; }
 
-        /* ========= BATTERY & ROUTE INFO ========= */
         .info-card { position: absolute; top: 60px; right: 12px; z-index: 1000; display: none; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
-        .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .metrics-card { padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; gap: 4px; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.3); backdrop-filter: blur(8px); }
         .dist-text { color: #34c759; font-size: 16px; }
-        .battery-text { color: #ffcc00; font-size: 15px; }
+        .battery-text { color: #e6b800; font-size: 15px; }
         .kwh-text { color: #007aff; font-size: 12px; font-weight: normal; }
-        .elev-text { color: #aaa; font-size: 11px; font-weight: normal; }
+        .elev-text { font-size: 11px; font-weight: normal; }
 
         .btn-add-fav { background: #ff9500 !important; color: #000 !important; font-weight: bold; border: none !important; }
         .btn-calib { background: #34c759 !important; color: #000 !important; font-weight: bold; width: 100%; margin-top: 6px; }
@@ -93,12 +102,18 @@
     <div id="map"></div>
 
     <div class="top-bar">
+        <button class="btn btn-fs" onclick="forceRefreshMap()" title="მაპის განახლება">⛶</button>
         <button class="btn btn-fav panel-bg" onclick="toggleFavs()">★</button>
         <button class="btn btn-settings" onclick="toggleSettings()">⚙️</button>
-        <div class="search-box panel-bg">
-            <input type="text" id="searchInput" class="search-input" placeholder="ძებნა..." onkeydown="if(event.key==='Enter') searchLocation()">
-            <button class="btn" onclick="searchLocation()">🔍</button>
+        
+        <div class="search-container">
+            <div class="search-box panel-bg">
+                <input type="text" id="searchInput" class="search-input" placeholder="ძებნა საქართველოში (ქართულად/ინგლისურად)..." oninput="handleSearchInput()" onkeydown="if(event.key==='Enter') searchLocation()">
+                <button class="btn" onclick="searchLocation()">🔍</button>
+            </div>
+            <div class="suggestions-dropdown panel-bg" id="suggestionsDropdown"></div>
         </div>
+
         <button class="btn panel-bg" onclick="goToMyLocation()">📍</button>
         <button class="btn panel-bg" id="btnZoom" onclick="toggleZoomMode()">ZOOM</button>
         <button class="btn btn-mode-switch" onclick="toggleTheme()">☀️/🌙</button>
@@ -127,20 +142,18 @@
         <div class="settings-group">
             <label>ტრიმი (კომპლექტაცია):</label>
             <select id="carTrimSelect" class="settings-select" onchange="updateBatteries()">
-                <!-- JS დინამიკურად ავსებს -->
             </select>
         </div>
 
         <div class="settings-group">
             <label>ელემენტი / ქიმია:</label>
             <select id="carBatterySelect" class="settings-select" onchange="onBatteryChange()">
-                <!-- JS დინამიკურად ავსებს -->
             </select>
         </div>
 
         <div class="settings-group">
             <label>100%-ზე ფაქტობრივი გარბენი (კმ):</label>
-            <input type="number" id="fullRangeInput" class="settings-input" value="380" oninput="calculateDegradation()">
+            <input type="number" id="fullRangeInput" class="settings-input" value="325" oninput="calculateDegradation()">
         </div>
 
         <div class="degradation-box">
@@ -153,7 +166,6 @@
             <input type="number" id="baseConsumptionInput" class="settings-input" value="150" onchange="saveSettings()">
         </div>
 
-        <!-- კალიბრაციის სექცია -->
         <div class="calib-section">
             <div class="settings-title" style="margin-bottom:6px;">ტრიპის კალიბრაცია</div>
             <button class="btn btn-calib" onclick="startCalibrationTrip()">📍 ახალი ტრიპის დაწყება/დასრულება</button>
@@ -233,6 +245,7 @@
         let currentRouteClimb = 0;
         let currentRouteDescent = 0;
         let currentTheme = localStorage.getItem('tesla_theme') || 'dark';
+        let searchTimeout = null;
 
         let favorites = JSON.parse(localStorage.getItem('tesla_favs')) || [];
         let calibrationTrips = JSON.parse(localStorage.getItem('tesla_calib_trips')) || [];
@@ -261,10 +274,13 @@
         
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        const darkTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 });
-        const lightTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 });
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         applyTheme(currentTheme);
+
+        setTimeout(() => {
+            map.invalidateSize(true);
+        }, 200);
 
         const teslaIcon = L.divIcon({ className: 'tesla-icon', iconSize: [30, 55], iconAnchor: [15, 27] });
 
@@ -292,6 +308,7 @@
         map.on('click', e => {
             currentDestination = e.latlng;
             routingControl.setWaypoints([myLocation, currentDestination]);
+            document.getElementById('suggestionsDropdown').style.display = 'none';
         });
 
         routingControl.on('routesfound', e => {
@@ -321,7 +338,110 @@
             document.getElementById('infoCard').style.display = 'flex';
         });
 
-        // ========= კალიბრაციის ლოგიკა =========
+        function forceRefreshMap() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+            map.invalidateSize(true);
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                let counter = 0;
+                let refreshInterval = setInterval(() => {
+                    map.invalidateSize(true);
+                    counter++;
+                    if (counter > 8) {
+                        clearInterval(refreshInterval);
+                    }
+                }, 300);
+            }
+        });
+
+        function handleSearchInput() {
+            clearTimeout(searchTimeout);
+            const q = document.getElementById('searchInput').value.trim();
+            const dropdown = document.getElementById('suggestionsDropdown');
+
+            if (q.length < 2) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetchSuggestions(q);
+            }, 300);
+        }
+
+        async function fetchSuggestions(query) {
+            try {
+                const viewbox = "40.0,41.0,46.7,43.6"; 
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&accept-language=ka,en&limit=10&viewbox=${viewbox}&bounded=1&addressdetails=1`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const dropdown = document.getElementById('suggestionsDropdown');
+                dropdown.innerHTML = '';
+
+                if (data.length === 0) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'sug-item';
+                    
+                    let addr = item.address || {};
+                    let details = addr.village || addr.town || addr.city || addr.county || addr.state || "";
+                    div.innerText = details ? `${item.display_name} (${details})` : item.display_name;
+
+                    div.onclick = () => {
+                        selectSuggestion(item.lat, item.lon, item.display_name);
+                    };
+                    dropdown.appendChild(div);
+                });
+
+                dropdown.style.display = 'block';
+            } catch (e) {
+                console.error("Autocomplete error:", e);
+            }
+        }
+
+        function selectSuggestion(lat, lon, name) {
+            document.getElementById('searchInput').value = name;
+            document.getElementById('suggestionsDropdown').style.display = 'none';
+            currentDestination = L.latLng(parseFloat(lat), parseFloat(lon));
+            routingControl.setWaypoints([myLocation, currentDestination]);
+            map.setView(currentDestination, 14, { animate: true });
+        }
+
+        async function searchLocation() {
+            const q = document.getElementById('searchInput').value.trim();
+            if (!q) return;
+            document.getElementById('suggestionsDropdown').style.display = 'none';
+            try {
+                const viewbox = "40.0,41.0,46.7,43.6";
+                const res = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ka,en&limit=1&viewbox=${viewbox}&bounded=1`;
+                const response = await fetch(res);
+                const data = await response.json();
+                if (data.length > 0) {
+                    currentDestination = L.latLng(data[0].lat, data[0].lon);
+                    routingControl.setWaypoints([myLocation, currentDestination]);
+                    map.setView(currentDestination, 14, { animate: true });
+                } else {
+                    alert("საქართველოში მსგავსი ადგილი ვერ მოიძებნა");
+                }
+            }  catch (e) { console.error(e); }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('suggestionsDropdown').style.display = 'none';
+            }
+        });
+
         function startCalibrationTrip() {
             if (currentRouteDist <= 0) {
                 alert("ჯერ მონიშნეთ მარშრუტი რუკაზე!");
@@ -341,37 +461,31 @@
                 return;
             }
 
-            const usedPct = sp - ep; // რეალურად დახარჯული პროცენტი
+            const usedPct = sp - ep;
             loadSettingsFromUI();
 
-            // სრული ბატარეის ტევადობა kWh-ში
             const totalBattKwh = (carSettings.fullRange * carSettings.baseConsumption) / 1000;
-            // რეალურად დახარჯული kWh
             const actualKwh = (usedPct / 100) * totalBattKwh;
 
-            // რელიეფის ენერგიის გამოკლება რომ სუფთა წვა მივიღოთ
             let elevationFactorKwh = (currentRouteClimb * 0.005) - (currentRouteDescent * 0.003);
             if (elevationFactorKwh < 0) elevationFactorKwh = 0;
 
             let pureDriveKwh = actualKwh - elevationFactorKwh;
             if (pureDriveKwh < 0) pureDriveKwh = actualKwh;
 
-            // ახალი გამოთვლილი საბაზისო წვა (Wh/km)
             const calculatedNewConsumption = Math.round((pureDriveKwh * 1000) / currentRouteDist);
 
             if (calculatedNewConsumption > 80 && calculatedNewConsumption < 350) {
-                // ძველი და ახალი წვის საშუალო (სტაბილიზაციისთვის)
                 carSettings.baseConsumption = Math.round((carSettings.baseConsumption + calculatedNewConsumption) / 2);
                 document.getElementById('baseConsumptionInput').value = carSettings.baseConsumption;
                 
-                // ვინახავთ ისტორიაში
                 calibrationTrips.unshift({
                     dist: currentRouteDist.toFixed(1),
                     used: usedPct.toFixed(1),
                     newCons: carSettings.baseConsumption,
                     date: new Date().toLocaleDateString()
                 });
-                if (calibrationTrips.length > 5) calibrationTrips.pop(); // ბოლო 5 ტრიპი
+                if (calibrationTrips.length > 5) calibrationTrips.pop();
 
                 localStorage.setItem('tesla_calib_trips', JSON.stringify(calibrationTrips));
                 saveSettings();
@@ -393,7 +507,6 @@
                 return;
             }
 
-            // გრაფიკული ვიზუალიზაცია ტექსტური მინი-გრაფით
             let avg = Math.round(calibrationTrips.reduce((acc, t) => acc + t.newCons, 0) / calibrationTrips.length);
             statsEl.innerHTML = `ბოლო ტრიპების საშუალო წვა: <b>${avg} Wh/km</b> (სულ: ${calibrationTrips.length} ტრიპი)`;
 
@@ -510,14 +623,11 @@
             if (theme === 'dark') {
                 body.classList.remove('light-mode');
                 body.classList.add('dark-mode');
-                if (map.hasLayer(lightTiles)) map.removeLayer(lightTiles);
-                darkTiles.addTo(map);
             } else {
                 body.classList.remove('dark-mode');
                 body.classList.add('light-mode');
-                if (map.hasLayer(darkTiles)) map.removeLayer(darkTiles);
-                lightTiles.addTo(map);
             }
+            setTimeout(() => map.invalidateSize(true), 50);
         }
 
         function saveCurrentPinAsFav() {
@@ -582,20 +692,6 @@
                     map.panTo(myLocation, { animate: true, duration: 0.5 });
                 }, null, { enableHighAccuracy: true });
             }
-        }
-
-        async function searchLocation() {
-            const q = document.getElementById('searchInput').value;
-            if (!q) return;
-            try {
-                const res = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`;
-                const response = await fetch(res);
-                const data = await response.json();
-                if (data.length > 0) {
-                    currentDestination = L.latLng(data[0].lat, data[0].lon);
-                    routingControl.setWaypoints([myLocation, currentDestination]);
-                }
-            } catch (e) { console.error(e); }
         }
 
         goToMyLocation();
