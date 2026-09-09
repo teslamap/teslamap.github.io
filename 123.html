@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tesla VIN Decoder - Tesla UI Edition</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #000000; 
+            color: #ffffff; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 800px; 
+            background: #111111; 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid #222222;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8); 
+        }
+        h2 { 
+            margin-top: 0; 
+            color: #fff; 
+            text-align: center; 
+            font-weight: 400;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+        }
+        .input-group { 
+            display: flex; 
+            gap: 12px; 
+            margin-bottom: 20px; 
+        }
+        input { 
+            flex: 1; 
+            padding: 14px 16px; 
+            background: #1a1a1a; 
+            border: 1px solid #333; 
+            color: #fff; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: #e82127;
+        }
+        button { 
+            background: #e82127; 
+            color: white; 
+            border: none; 
+            padding: 0 24px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 15px; 
+            transition: background 0.2s; 
+        }
+        button:hover { background: #ff1e25; }
+        .secondary-btn { 
+            background: #222; 
+            border: 1px solid #444; 
+        }
+        .secondary-btn:hover { background: #333; }
+        
+        #scanner-container { 
+            display: none; 
+            margin-bottom: 20px; 
+            position: relative; 
+            text-align: center; 
+            background: #000; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            border: 1px solid #333;
+        }
+        #preview { width: 100%; max-height: 250px; object-fit: cover; display: block; }
+        .close-scanner { margin: 12px; background: #333; padding: 10px 20px; }
+
+        #result { 
+            background: #161616; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 3px solid #e82127; 
+            min-height: 50px; 
+            line-height: 1.6; 
+            border-top: 1px solid #222;
+            border-right: 1px solid #222;
+            border-bottom: 1px solid #222;
+        }
+        .vin-row { 
+            margin-bottom: 12px; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #222; 
+            display: flex; 
+            justify-content: space-between; 
+            flex-wrap: wrap; 
+        }
+        .vin-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .vin-label { font-weight: 500; color: #a1a1a6; width: 40%; font-size: 14px; }
+        .vin-val { color: #f5f5f7; text-align: right; width: 58%; font-size: 14px; font-weight: 400; }
+        .error { color: #ff453a; text-align: center; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Tesla VIN დეკოდერი</h2>
+        
+        <div class="input-group">
+            <input type="text" id="vinInput" placeholder="შეიყვანეთ 17-ნიშნა VIN..." maxlength="17">
+            <button onclick="decodeVIN()">გაშიფვრა</button>
+            <button class="secondary-btn" onclick="startScanner()" title="კამერით სკანირება">📷</button>
+        </div>
+
+        <div id="scanner-container">
+            <video id="preview" autoplay playsinline></video>
+            <button class="close-scanner" onclick="stopScanner()">სკანირების შეწყვეტა</button>
+        </div>
+
+        <div id="result" style="color: #6e6e73; text-align: center;">VIN კოდის დეტალები გამოჩნდება აქ...</div>
+    </div>
+
+    <script>
+        let videoStream = null;
+
+        async function startScanner() {
+            const scannerContainer = document.getElementById('scanner-container');
+            const videoElement = document.getElementById('preview');
+            scannerContainer.style.display = 'block';
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                videoElement.srcObject = videoStream;
+
+                if ('BarcodeDetector' in window) {
+                    const barcodeDetector = new BarcodeDetector({ formats: ['code_39', 'code_128', 'qr_code'] });
+                    
+                    const detectCode = async () => {
+                        if (!videoStream) return;
+                        try {
+                            const barcodes = await barcodeDetector.detect(videoElement);
+                            if (barcodes.length > 0) {
+                                const code = barcodes[0].rawValue.trim().toUpperCase();
+                                if (code.length === 17) {
+                                    document.getElementById('vinInput').value = code;
+                                    stopScanner();
+                                    decodeVIN();
+                                    return;
+                                }
+                            }
+                        } catch (err) {
+                            console.error(err);
+                        }
+                        if (videoStream) {
+                            requestAnimationFrame(detectCode);
+                        }
+                    };
+                    requestAnimationFrame(detectCode);
+                } else {
+                    alert('კამერა ჩაირთო, მაგრამ ბრაუზერი ავტომატურ სკანირებას არ მხარს უჭერს.');
+                }
+            } catch (err) {
+                alert('კამერასთან წვდომა ვერ მოხერხდა: ' + err.message);
+                scannerContainer.style.display = 'none';
+            }
+        }
+
+        function stopScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            document.getElementById('scanner-container').style.display = 'none';
+        }
+
+        function decodeVIN() {
+            let vin = document.getElementById('vinInput').value.trim().toUpperCase();
+            let resultDiv = document.getElementById('result');
+
+            if (vin.length !== 17) {
+                resultDiv.innerHTML = `<div class="error">VIN კოდი უნდა შედგებოდეს ზუსტად 17 სიმბოლოსგან! (მოცემულია: ${vin.length})</div>`;
+                return;
+            }
+
+            const p1_3 = vin.substring(0, 3);
+            const p4 = vin.charAt(3);
+            const p5 = vin.charAt(4);
+            const p6 = vin.charAt(5);
+            const p7 = vin.charAt(6);
+            const p8 = vin.charAt(7);
+            const p9 = vin.charAt(8);
+            const p10 = vin.charAt(9);
+            const p11 = vin.charAt(10);
+            const p12_17 = vin.substring(11, 17);
+
+            const wmiMap = {
+                "5YJ": "აშშ (Fremont) – Model S / Model 3",
+                "7SA": "აშშ (Fremont/Austin) – Model X / Model Y",
+                "LRW": "ჩინეთი (Shanghai) – Model 3 / Model Y",
+                "XP7": "გერმანია (Berlin) – Model Y",
+                "SFZ": "დიდი ბრიტანეთი (Lotus factory) – Roadster (2008-2012)",
+                "5XJ": "აშშ (Model S/3)",
+                "3MW": "მექსიკა (Monterrey)"
+            };
+
+            const modelMap = { 'S': 'Model S', '3': 'Model 3', 'X': 'Model X', 'Y': 'Model Y', 'R': 'Roadster' };
+            const chassisMap = { 'A': 'Hatchback (5 კარი)', 'B': 'Hatchback (5 კარი / მარჯვენასაჭიანი)', 'C': 'E-კლასის MPV', 'D': 'E-კლასის MPV (მარჯვენასაჭიანი)', 'E': 'სედანი (4 კარი)', 'F': 'სედანი (მარჯვენასაჭიანი)', 'G': 'D კლასის MPV (Model Y)' };
+            const securityMap = { '1': 'Type 2 ღვედები / წინა/გვერდითი აირბალიშები (S/3)', 'A': 'Type 2 ღვედები / პაკეტი (X/Y)', 'B': 'Type 2 ღვედები (X/Y)', 'D': 'Type 2 ღვედები (X/Y)', '3': 'სტანდარტული ღვედები / მრავალ-აირბალიშანი', '4': 'სტანდარტული ღვედები / მრავალ-აირბალიშანი', '5': 'სტანდარტული ღვედები / მრავალ-აირბალიშანი', '6': 'აქტიური ღვედები / სრული აირბალიშები', '7': 'აქტიური ღვედები / სრული აირბალიშები', '2': 'მექანიკური ღვედი (Roadster)' };
+            const batteryMap = { 'E': 'ლითიუმ-იონი (NMC/NCA)', 'F': 'ლითიუმ რკინის ფოსფატი (LFP)', 'H': 'ლითიუმ რკინის ფოსფატი (LFP)', 'S': 'სტანდარტული / ულტრა-მაღალი ელექტრო', 'V': 'ულტრა-მაღალი ტევადობის ელექტრო', 'B': 'ბატარეის პაკეტი (Roadster)' };
+            const motorMap = { '1': 'ერთი ძრავა', '2': 'ორმაგი ძრავა (Dual Motor)', '3': 'პროდუქციული (ძველი)', '4': 'ერთი ძრავა (Roadster)', '5': 'Plaid (სამი ძრავა)', '6': 'Plaid (სამი ძრავა)', 'A': 'Model 3 (ერთი ძრავა)', 'B': 'Model 3 (ორმაგი ძრავა)', 'C': 'Model 3 (პროდუქცია)', 'D': 'ერთი ძრავა', 'E': 'ორმაგი ძრავა', 'F': 'პროდუქცია', 'J': 'Hairpin winding (ერთი ძრავა)', 'K': 'Hairpin winding (ორმაგი)', 'L': 'Hairpin winding (პროდუქცია)', 'R': 'Model 3 Highland (ერთი)', 'S': 'Model 3 Highland (ორმაგი)', 'T': 'Model 3 Highland (პროდუქცია)', 'U': 'Cybercab დრაივი', '0': 'სტანდარტული დრაივი' };
+            const yearMap = { '8': '2008', '9': '2009', 'A': '2010', 'B': '2011', 'C': '2012', 'D': '2013', 'E': '2014', 'F': '2015', 'G': '2016', 'H': '2017', 'J': '2018', 'K': '2019', 'L': '2020', 'M': '2021', 'N': '2022', 'P': '2023', 'R': '2024', 'S': '2025', 'T': '2026' };
+            const factoryMap = { 'F': 'Fremont, კალიფორნია, აშშ', 'A': 'Giga Texas, აშშ', 'C': 'Shanghai, ჩინეთი', 'G': 'Berlin, გერმანია', 'B': 'Berlin, Brandenburg', 'N': 'Giga Nevada', '1': 'Lotus factory (Roadster)', '3': 'Lotus factory (Roadster)', 'P': 'Palo Alto (პროტოტიპი)' };
+
+            let html = `
+                <div class="vin-row"><span class="vin-label">1-3. მწარმოებელი (WMI):</span> <span class="vin-val">${p1_3} — ${wmiMap[p1_3] || 'უცნობი'}</span></div>
+                <div class="vin-row"><span class="vin-label">4. მანქანის მოდელი:</span> <span class="vin-val">${p4} — ${modelMap[p4] || 'უცნობი'}</span></div>
+                <div class="vin-row"><span class="vin-label">5. შასი / ძარა:</span> <span class="vin-val">${p5} — ${chassisMap[p5] || 'სტანდარტული'}</span></div>
+                <div class="vin-row"><span class="vin-label">6. უსაფრთხოება:</span> <span class="vin-val">${p6} — ${securityMap[p6] || 'სტანდარტული'}</span></div>
+                <div class="vin-row"><span class="vin-label">7. ბატარეა:</span> <span class="vin-val">${p7} — ${batteryMap[p7] || 'ელექტრო ძცობა'}</span></div>
+                <div class="vin-row"><span class="vin-label">8. ძრავა / წამყვანი:</span> <span class="vin-val">${p8} — ${motorMap[p8] || 'კონფიგურაცია'}</span></div>
+                <div class="vin-row"><span class="vin-label">9. შემოწმების კოდი:</span> <span class="vin-val">${p9} (მათემატიკური ვალიდატორი)</span></div>
+                <div class="vin-row"><span class="vin-label">10. გამოშვების წელი:</span> <span class="vin-val">${p10} — ${yearMap[p10] || 'უცნობი'}</span></div>
+                <div class="vin-row"><span class="vin-label">11. აწყობის ქარხანა:</span> <span class="vin-val">${p11} — ${factoryMap[p11] || 'ქარხანა'}</span></div>
+                <div class="vin-row"><span class="vin-label">12-17. სერიული ნომერი:</span> <span class="vin-val">${p12_17}</span></div>
+            `;
+
+            resultDiv.innerHTML = html;
+        }
+    </script>
+
+</body>
+</html>
