@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tesla VIN Decoder - Tesla UI Edition</title>
+    <title>Tesla VIN Decoder + Photo OCR</title>
+    <!-- ვტვირთავთ Tesseract.js ბიბლიოთეკას ფოტოდან ტექსტის (VIN-ის) წასაკითხად -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v5/dist/tesseract.min.js"></script>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -36,9 +38,11 @@
             display: flex; 
             gap: 12px; 
             margin-bottom: 20px; 
+            flex-wrap: wrap;
         }
-        input { 
+        input[type="text"] { 
             flex: 1; 
+            min-width: 250px;
             padding: 14px 16px; 
             background: #1a1a1a; 
             border: 1px solid #333; 
@@ -48,11 +52,9 @@
             text-transform: uppercase; 
             letter-spacing: 2px; 
             outline: none;
-            transition: border-color 0.2s;
         }
-        input:focus {
-            border-color: #e82127;
-        }
+        input[type="text"]:focus { border-color: #e82127; }
+        
         button { 
             background: #e82127; 
             color: white; 
@@ -65,24 +67,25 @@
             transition: background 0.2s; 
         }
         button:hover { background: #ff1e25; }
-        .secondary-btn { 
-            background: #222; 
-            border: 1px solid #444; 
-        }
+        .secondary-btn { background: #222; border: 1px solid #444; position: relative; overflow: hidden; }
         .secondary-btn:hover { background: #333; }
         
-        #scanner-container { 
-            display: none; 
-            margin-bottom: 20px; 
-            position: relative; 
-            text-align: center; 
-            background: #000; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            border: 1px solid #333;
+        /* ფაილის ასატვირთი ფარული ინფუთი */
+        .file-input {
+            position: absolute;
+            left: 0; top: 0;
+            opacity: 0;
+            width: 100%; height: 100%;
+            cursor: pointer;
         }
-        #preview { width: 100%; max-height: 250px; object-fit: cover; display: block; }
-        .close-scanner { margin: 12px; background: #333; padding: 10px 20px; }
+
+        #loading {
+            display: none;
+            color: #e82127;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
 
         #result { 
             background: #161616; 
@@ -91,9 +94,8 @@
             border-left: 3px solid #e82127; 
             min-height: 50px; 
             line-height: 1.6; 
-            border-top: 1px solid #222;
-            border-right: 1px solid #222;
-            border-bottom: 1px solid #222;
+            border: 1px solid #222;
+            border-left-width: 3px;
         }
         .vin-row { 
             margin-bottom: 12px; 
@@ -105,80 +107,60 @@
         }
         .vin-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .vin-label { font-weight: 500; color: #a1a1a6; width: 40%; font-size: 14px; }
-        .vin-val { color: #f5f5f7; text-align: right; width: 58%; font-size: 14px; font-weight: 400; }
+        .vin-val { color: #f5f5f7; text-align: right; width: 58%; font-size: 14px; }
         .error { color: #ff453a; text-align: center; font-weight: 500; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Tesla VIN დეკოდერი</h2>
+        <h2>Tesla VIN დეკოდერი (სტიკერის ფოტოდან ამოცნობით)</h2>
         
         <div class="input-group">
             <input type="text" id="vinInput" placeholder="შეიყვანეთ 17-ნიშნა VIN..." maxlength="17">
             <button onclick="decodeVIN()">გაშიფვრა</button>
-            <button class="secondary-btn" onclick="startScanner()" title="კამერით სკანირება">📷</button>
+            <button class="secondary-btn">
+                📸 სტიკერის ფოტო
+                <input type="file" class="file-input" accept="image/*" capture="environment" onchange="handleImageUpload(event)">
+            </button>
         </div>
 
-        <div id="scanner-container">
-            <video id="preview" autoplay playsinline></video>
-            <button class="close-scanner" onclick="stopScanner()">სკანირების შეწყვეტა</button>
-        </div>
-
+        <div id="loading">მიმდინარეობს ფოტოდან ტექსტის ამოკითხვა... გთხოვთ დაიცადოთ.</div>
         <div id="result" style="color: #6e6e73; text-align: center;">VIN კოდის დეტალები გამოჩნდება აქ...</div>
     </div>
 
     <script>
-        let videoStream = null;
+        // ფოტოდან ტექსტის ამოკითხვა Tesseract OCR-ის გამოყენებით
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-        async function startScanner() {
-            const scannerContainer = document.getElementById('scanner-container');
-            const videoElement = document.getElementById('preview');
-            scannerContainer.style.display = 'block';
+            const loadingDiv = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = "მუშავდება სურათი...";
 
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                videoElement.srcObject = videoStream;
+                // ვკითხულობთ სურათზე არსებულ ტექსტს
+                const { data: { text } } = await Tesseract.recognize(file, 'eng');
+                loadingDiv.style.display = 'none';
 
-                if ('BarcodeDetector' in window) {
-                    const barcodeDetector = new BarcodeDetector({ formats: ['code_39', 'code_128', 'qr_code'] });
-                    
-                    const detectCode = async () => {
-                        if (!videoStream) return;
-                        try {
-                            const barcodes = await barcodeDetector.detect(videoElement);
-                            if (barcodes.length > 0) {
-                                const code = barcodes[0].rawValue.trim().toUpperCase();
-                                if (code.length === 17) {
-                                    document.getElementById('vinInput').value = code;
-                                    stopScanner();
-                                    decodeVIN();
-                                    return;
-                                }
-                            }
-                        } catch (err) {
-                            console.error(err);
-                        }
-                        if (videoStream) {
-                            requestAnimationFrame(detectCode);
-                        }
-                    };
-                    requestAnimationFrame(detectCode);
+                // ვეძებთ 17-ნიშნა VIN კოდს ამოკითხულ ტექსტში (Tesla-ს შემთხვევაში ხშირად იწყება 5YJ, LRW, XP7 და ა.შ.)
+                // ვპოულობთ ყველა 17 სიმბოლოსგან შემდგარ ალფანუმერულ კომბინაციას
+                const cleanedText = text.replace(/[\s\-_]/g, '').toUpperCase();
+                const vinMatch = cleanedText.match(/[A-HJ-NPR-Z0-9]{17}/);
+
+                if (vinMatch) {
+                    const foundVin = vinMatch[0];
+                    document.getElementById('vinInput').value = foundVin;
+                    decodeVIN(); // ავტომატურად ვუშვებთ გაშიფვრას
                 } else {
-                    alert('კამერა ჩაირთო, მაგრამ ბრაუზერი ავტომატურ სკანირებას არ მხარს უჭერს.');
+                    resultDiv.innerHTML = `<div class="error">სურათზე 17-ნიშნა VIN კოდი ვერ მოიძებნა ავტომატურად. სცადეთ უკეთესი ხარისხის ფოტო ან ხელით ჩაწერეთ.<br><br><small>ამოკითხული ტექსტი: ${text}</small></div>`;
                 }
             } catch (err) {
-                alert('კამერასთან წვდომა ვერ მოხერხდა: ' + err.message);
-                scannerContainer.style.display = 'none';
+                loadingDiv.style.display = 'none';
+                resultDiv.innerHTML = `<div class="error">შეცდომა სურათის დამუშავებისას: ${err.message}</div>`;
             }
-        }
-
-        function stopScanner() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            document.getElementById('scanner-container').style.display = 'none';
         }
 
         function decodeVIN() {
