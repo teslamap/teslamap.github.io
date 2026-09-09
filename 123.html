@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tesla VIN Decoder + Photo OCR</title>
-    <!-- ვტვირთავთ Tesseract.js ბიბლიოთეკას ფოტოდან ტექსტის (VIN-ის) წასაკითხად -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v5/dist/tesseract.min.js"></script>
+    <title>Tesla VIN Decoder - Live OCR</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -67,10 +65,9 @@
             transition: background 0.2s; 
         }
         button:hover { background: #ff1e25; }
-        .secondary-btn { background: #222; border: 1px solid #444; position: relative; overflow: hidden; }
+        .secondary-btn { background: #222; border: 1px solid #444; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .secondary-btn:hover { background: #333; }
         
-        /* ფაილის ასატვირთი ფარული ინფუთი */
         .file-input {
             position: absolute;
             left: 0; top: 0;
@@ -114,52 +111,66 @@
 <body>
 
     <div class="container">
-        <h2>Tesla VIN დეკოდერი (სტიკერის ფოტოდან ამოცნობით)</h2>
+        <h2>Tesla VIN დეკოდერი + სტიკერის სკანერი</h2>
         
         <div class="input-group">
             <input type="text" id="vinInput" placeholder="შეიყვანეთ 17-ნიშნა VIN..." maxlength="17">
             <button onclick="decodeVIN()">გაშიფვრა</button>
             <button class="secondary-btn">
                 📸 სტიკერის ფოტო
-                <input type="file" class="file-input" accept="image/*" capture="environment" onchange="handleImageUpload(event)">
+                <input type="file" class="file-input" accept="image/*" capture="environment" onchange="uploadAndScan(event)">
             </button>
         </div>
 
-        <div id="loading">მიმდინარეობს ფოტოდან ტექსტის ამოკითხვა... გთხოვთ დაიცადოთ.</div>
+        <div id="loading">მუშავდება სტიკერის ფოტო, გთხოვთ დაიცადოთ...</div>
         <div id="result" style="color: #6e6e73; text-align: center;">VIN კოდის დეტალები გამოჩნდება აქ...</div>
     </div>
 
     <script>
-        // ფოტოდან ტექსტის ამოკითხვა Tesseract OCR-ის გამოყენებით
-        async function handleImageUpload(event) {
+        async function uploadAndScan(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const loadingDiv = document.getElementById('loading');
             const resultDiv = document.getElementById('result');
             loadingDiv.style.display = 'block';
-            resultDiv.innerHTML = "მუშავდება სურათი...";
+            resultDiv.innerHTML = "მიმდინარეობს სერვერული დამუშავება...";
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('apikey', 'helloworld'); // უფასო საჯარო გასაღები სწრაფი ტესტირებისთვის
+            formData.append('language', 'eng');
+            formData.append('isOverlayRequired', 'false');
 
             try {
-                // ვკითხულობთ სურათზე არსებულ ტექსტს
-                const { data: { text } } = await Tesseract.recognize(file, 'eng');
+                const response = await fetch('https://api.ocr.space/parse/image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
                 loadingDiv.style.display = 'none';
 
-                // ვეძებთ 17-ნიშნა VIN კოდს ამოკითხულ ტექსტში (Tesla-ს შემთხვევაში ხშირად იწყება 5YJ, LRW, XP7 და ა.შ.)
-                // ვპოულობთ ყველა 17 სიმბოლოსგან შემდგარ ალფანუმერულ კომბინაციას
-                const cleanedText = text.replace(/[\s\-_]/g, '').toUpperCase();
-                const vinMatch = cleanedText.match(/[A-HJ-NPR-Z0-9]{17}/);
+                if (data && data.ParsedResults && data.ParsedResults.length > 0) {
+                    const parsedText = data.ParsedResults[0].ParsedText;
+                    
+                    // ვწმენდთ და ვეძებთ 17-ნიშნა VIN კოდს
+                    const cleaned = parsedText.replace(/[\s\-_]/g, '').toUpperCase();
+                    const vinMatch = cleaned.match(/[A-HJ-NPR-Z0-9]{17}/);
 
-                if (vinMatch) {
-                    const foundVin = vinMatch[0];
-                    document.getElementById('vinInput').value = foundVin;
-                    decodeVIN(); // ავტომატურად ვუშვებთ გაშიფვრას
+                    if (vinMatch) {
+                        const foundVin = vinMatch[0];
+                        document.getElementById('vinInput').value = foundVin;
+                        decodeVIN();
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">სტიკერზე ტექსტი წაიკითხა, მაგრამ ზუსტი 17-ნიშნა VIN ვერ გამოიყო.<br><small style="color:#aaa;">ამოკითხული ტექსტი: ${parsedText}</small></div>`;
+                    }
                 } else {
-                    resultDiv.innerHTML = `<div class="error">სურათზე 17-ნიშნა VIN კოდი ვერ მოიძებნა ავტომატურად. სცადეთ უკეთესი ხარისხის ფოტო ან ხელით ჩაწერეთ.<br><br><small>ამოკითხული ტექსტი: ${text}</small></div>`;
+                    resultDiv.innerHTML = `<div class="error">სურათიდან ტექსტის ამოკითხვა ვერ მოხერხდა. სცადეთ უკეთესი განათებით გადაღება.</div>`;
                 }
             } catch (err) {
                 loadingDiv.style.display = 'none';
-                resultDiv.innerHTML = `<div class="error">შეცდომა სურათის დამუშავებისას: ${err.message}</div>`;
+                resultDiv.innerHTML = `<div class="error">კავშირის შეცდომა: ${err.message}</div>`;
             }
         }
 
