@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <title>ალუმინის კარ-ფანჯრის ვიზუალური კონფიგურატორი</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f0f4f8; color: #333; padding: 20px; }
+        .container { max-width: 900px; margin: 30px auto; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+        .wizard-header { background: #1e293b; color: white; padding: 25px 30px; text-align: center; }
+        .wizard-header h1 { font-size: 22px; margin-bottom: 8px; }
+        .wizard-header p { font-size: 14px; color: #94a3b8; }
+        .progress-bar { display: flex; background: #334155; height: 6px; }
+        .progress-fill { background: #38bdf8; width: 10%; transition: width 0.3s ease; }
+        .wizard-body { padding: 30px; }
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        h2 { font-size: 18px; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #334155; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+        .form-group textarea { resize: vertical; height: 80px; }
+        
+        .row { display: flex; gap: 15px; }
+        .row .form-group { flex: 1; }
+
+        .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px; }
+        .card-option { border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; cursor: pointer; background: #fff; transition: all 0.2s ease; text-align: center; }
+        .card-option img { width: 100%; height: 120px; object-fit: cover; border-bottom: 1px solid #cbd5e1; }
+        .card-option span { display: block; padding: 10px; font-size: 14px; font-weight: 600; color: #334155; }
+        .card-option.selected { border-color: #2563eb; background: #eff6ff; }
+        .card-option.selected span { color: #2563eb; }
+
+        .wizard-footer { display: flex; justify-content: space-between; padding: 20px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-prev { background: #e2e8f0; color: #475569; }
+        .btn-prev:hover { background: #cbd5e1; }
+        .btn-next, .btn-submit { background: #2563eb; color: white; }
+        .btn-next:hover, .btn-submit:hover { background: #1d4ed8; }
+        .choice-box { display: flex; gap: 15px; margin-top: 10px; }
+        .choice-btn { flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-weight: 600; text-align: center; }
+        .choice-btn.selected { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+
+        .shape-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+        .shape-btn { padding: 10px 6px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; }
+        .shape-btn.active-shape { background: #2563eb; color: white; border-color: #2563eb; }
+
+        .paint-container { border: 2px dashed #cbd5e1; border-radius: 8px; background: #fff; text-align: center; padding: 15px; }
+        canvas { background: #fff; cursor: crosshair; border: 1px solid #cbd5e1; border-radius: 6px; touch-action: none; width: 100%; height: 350px; display: block; margin: 0 auto; }
+        .paint-tools { margin-top: 10px; display: flex; justify-content: center; gap: 10px; }
+        .paint-btn { padding: 6px 12px; font-size: 12px; background: #64748b; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .paint-btn:hover { background: #475569; }
+        .paint-btn-action { background: #0284c7; }
+        .paint-btn-action:hover { background: #0369a1; }
+        .canvas-hint { font-size: 12px; color: #64748b; margin-top: 6px; }
+
+        .preview-container { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; max-height: 400px; overflow-y: auto; margin-bottom: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="wizard-header">
+        <h1>ალუმინის კარ-ფანჯრის ვიზუალური კონფიგურატორი</h1>
+        <p id="itemCounterTitle">საკონტაქტო ინფორმაცია</p>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <form id="wizardForm" onsubmit="event.preventDefault();">
+        <div class="wizard-body">
+            
+            <!-- Step 1: Contact Info & Demolition -->
+            <div class="step active" id="step-1">
+                <h2>ნაბიჯი 1: საკონტაქტო და დემონტაჟი</h2>
+                <div class="form-group">
+                    <label>სახელი და გვარი:</label>
+                    <input type="text" id="client_name" required placeholder="მაგ: გიორგი ბერიძე">
+                </div>
+                <div class="form-group">
+                    <label>ტელეფონის ნომერი:</label>
+                    <input type="text" id="client_phone" required placeholder="მაგ: +995 599 00 00 00">
+                </div>
+                <div class="form-group">
+                    <label>ობიექტის მისამართი / ქალაქი:</label>
+                    <textarea id="client_address" rows="2" placeholder="ქალაქი, ქუჩა, შენიშვნა..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ძველი კონსტრუქციის დემონტაჟი:</label>
+                    <select id="demolition_needed">
+                        <option value="არ სჭირდება (ახალი პროექტი)">არ სჭირდება (ახალი პროექტი)</option>
+                        <option value="სჭირდება დემონტაჟი (გატანის გარეშე)">სჭირდება დემონტაჟი (გატანის გარეშე)</option>
+                        <option value="სჭირდება დემონტაჟი და გატანა">სჭირდება დემონტაჟი და გატანა</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Step 2: Dimensions & Sketch -->
+            <div class="step" id="step-2">
+                <h2>ნაბიჯი 2: ზომები და ფორმები</h2>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label>სიგანე (სმ):</label>
+                        <input type="number" id="item_width" placeholder="მაგ: 120" oninput="updateCanvasDrawing()">
+                    </div>
+                    <div class="form-group">
+                        <label>სიმაღლე (სმ):</label>
+                        <input type="number" id="item_height" placeholder="მაგ: 150" oninput="updateCanvasDrawing()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>აირჩიეთ ინსტრუმენტი:</label>
+                    
+                    <div class="shape-grid">
+                        <div class="shape-btn active-shape" onclick="setTool('rect', this)">📐 1. მართკუთხედი</div>
+                        <div class="shape-btn" onclick="setTool('triangle_right', this)">🔺 2. სამკუთხედი (მარჯვენა წიბო)</div>
+                        <div class="shape-btn" onclick="setTool('triangle_left', this)">🔺 3. სამკუთხედი (მარცხენა წიბო)</div>
+                        <div class="shape-btn" onclick="setTool('line', this)">📏 4. სწორი ხაზი (Line)</div>
+                    </div>
+
+                    <div class="paint-container">
+                        <canvas id="sketchCanvas" width="800" height="350"></canvas>
+                        <div class="canvas-hint" id="canvasHint">მიიტანეთ მაუსი არსებულ წერტილებთან ან თავისუფლად დახატეთ.</div>
+                        <div class="paint-tools">
+                            <button type="button" class="paint-btn paint-btn-action" onclick="undoAction()">↩️ უკან (Undo)</button>
+                            <button type="button" class="paint-btn paint-btn-action" onclick="redoAction()">↪️ წინ (Redo)</button>
+                            <button type="button" class="paint-btn" onclick="clearCanvas()">სრულად გასუფთავება</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="custom_sketch_data" value="">
+                </div>
+            </div>
+
+            <!-- Step 3: Construction Type -->
+            <div class="step" id="step-3">
+                <h2>ნაბიჯი 3: კონსტრუქციის ტიპი</h2>
+                <div class="form-group">
+                    <label>აირჩიეთ კონსტრუქციის ტიპი:</label>
+                    <div class="cards-grid">
+                        <div class="card-option selected" onclick="selectCard(this, 'system_type', 'ფანჯარა')">
+                            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&auto=format&fit=crop&q=80" alt="ფანჯარა">
+                            <span>ფანჯარა</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'system_type', 'კარი')">
+                            <img src="https://images.unsplash.com/photo-1534430480872-3498386e7856?w=400&auto=format&fit=crop&q=80" alt="კარი">
+                            <span>კარი</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'system_type', 'მოსაცურებელი სლაიდი')">
+                            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&auto=format&fit=crop&q=80" alt="სლაიდი">
+                            <span>მოსაცურებელი სლაიდი</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'system_type', 'არასტანდარტული ფორმა')">
+                            <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&auto=format&fit=crop&q=80" alt="არასტანდარტული">
+                            <span>არასტანდარტული / ვიტრაჟი</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="system_type" value="ფანჯარა">
+                </div>
+            </div>
+
+            <!-- Step 4: Thermal Break Option -->
+            <div class="step" id="step-4">
+                <h2>ნაბიჯი 4: თერმოხიდი (პროფილის ტიპი)</h2>
+                <div class="form-group">
+                    <label>აირჩიეთ პროფილის თერმული იზოლაცია:</label>
+                    <div class="cards-grid" style="grid-template-columns: repeat(1, 1fr);">
+                        <div class="card-option selected" onclick="selectCard(this, 'thermal_break', 'თერმოპროფილი (ენერგოეფექტური - სახლისთვის/გათბობისთვის)')">
+                            <span>თერმოპროფილი (ენერგოეფექტური / თბილი)</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'thermal_break', 'ცივი პროფილი (უზონო - აივნისთვის / შიდა ტიხრისთვის)')">
+                            <span>ცივი პროფილი (უზონო / აივნის ან ოფისისთვის)</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="thermal_break" value="თერმოპროფილი (ენერგოეფექტური - სახლისთვის/გათბობისთვის)">
+                </div>
+            </div>
+
+            <!-- Step 5: Sections Count -->
+            <div class="step" id="step-5">
+                <h2>ნაბიჯი 5: სექციების რაოდენობა</h2>
+                <div class="form-group">
+                    <label>აირჩიეთ ფრთების / სექციების რაოდენობა:</label>
+                    <div class="cards-grid">
+                        <div class="card-option selected" onclick="selectCard(this, 'sections_count', '1-ფრთიანი')">
+                            <img src="https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400&auto=format&fit=crop&q=80" alt="1 ფრთა">
+                            <span>1-ფრთიანი</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'sections_count', '2-ფრთიანი (არათანაბარი / მოკლე)')">
+                            <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&auto=format&fit=crop&q=80" alt="2 ფრთა">
+                            <span>2-ფრთიანი (არათანაბარი)</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'sections_count', '3-ფრთიანი')">
+                            <img src="https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=400&auto=format&fit=crop&q=80" alt="3 ფრთა">
+                            <span>3-ფრთიანი</span>
+                        </div>
+                        <div class="card-option" onclick="selectCard(this, 'sections_count', 'მრავალსექციანი / ვიტრაჟი')">
+                            <img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=400&auto=format&fit=crop&q=80" alt="მრავალსექციანი">
+                            <span>მრავალსექციანი / სხვა</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="sections_count" value="1-ფრთიანი">
+                </div>
+            </div>
+
+            <!-- Step 6: Opening & Threshold -->
+            <div class="step" id="step-6">
+                <h2>ნაბიჯი 6: ფუნქციონალი, გაღება და ზღურბლი</h2>
+                <div class="form-group">
+                    <label>მიუთითეთ რომელი ფრთაა მუშა და საით იღება:</label>
+                    <textarea id="opening_direction" placeholder="მაგ: მარჯვენა მახვილ კუთხესთან სიმეტრიულად..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ზღურბლის ტიპი (ძირითადად კარებისთვის):</label>
+                    <select id="threshold_type">
+                        <option value="სტანდარტული ალუმინის დაბალი ზღურბლი">სტანდარტული ალუმინის დაბალი ზღურბლი</option>
+                        <option value="სრული ჩარჩო-პროფილი (გარსშემოწერილი)">სრული ჩარჩო-პროფილი (გარსშემოწერილი)</option>
+                        <option value="მოძრავი / ავტომატური ზღურბლი">მოძრავი / ავტომატური ზღურბლი</option>
+                        <option value="არ ვრცელდება (ფანჯარა / ვიტრაჟია)">არ ვრცელდება (ფანჯარა / ვიტრაჟია)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Step 7: Glass Type -->
+            <div class="step" id="step-7">
+                <h2>ნაბიჯი 7: მინის ტიპი და დამატებითი ფუნქციები</h2>
+                <div class="form-group">
+                    <label>რა ტიპის შუშა ან მინაპაკეტია სასურველი?</label>
+                    <textarea id="glass_type" placeholder="მაგ: ენერგოეფექტური ორკამერიანი, მზისგან დამცავი (Solar)..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>მინის დამატებითი ფუნქციები:</label>
+                    <select id="glass_extra">
+                        <option value="სტანდარტული მინაპაკეტი">სტანდარტული მინაპაკეტი</option>
+                        <option value="აკუსტიკური (ხმის საიზოლაციო) შუშა">აკუსტიკური (ხმის საიზოლაციო) შუშა</option>
+                        <option value="ტრიპლექსი (უსაფრთხოების დამცავი შუშა)">ტრიპლექსი (უსაფრთხოების დამცავი შუშა)</option>
+                        <option value="სარკული / მუქი (Reflective / Tonered) შუშა">სარკული / მუქი (Reflective / Tonered) შუშა</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Step 8: Profile Color -->
+            <div class="step" id="step-8">
+                <h2>ნაბიჯი 8: პროფილის ფერი და დიზაინი</h2>
+                <div class="form-group">
+                    <label>რა ფერის პროფილი გსურთ?</label>
+                    <textarea id="profile_color" placeholder="მაგ: მუქი ანტრაციტი RAL 7016, კლასიკური თეთრი..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 20px;">
+                    <label>გსურთ კიდევ ერთი განსხვავებული კონსტრუქციის დამატება შეკვეთაში?</label>
+                    <div class="choice-box">
+                        <div class="choice-btn selected" id="optNo" onclick="setAddMore(false)">არა, საკმარისია / ნახვა</div>
+                        <div class="choice-btn" id="optYes" onclick="setAddMore(true)">კი, კიდევ ერთის დამატება</div>
+                    </div>
+                    <input type="hidden" id="addMoreInput" value="false">
+                </div>
+            </div>
+
+            <!-- Step 9: PDF Preview -->
+            <div class="step" id="step-9">
+                <h2>შეთავაზების გადახედვა და გადმოწერა</h2>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ქვემოთ ხედავ მზა დოკუმენტს ნახაზით და ზომებით. თუ ყველაფერი სწორია, გადმოწერე PDF ფაილად.</p>
+                
+                <div class="preview-container" id="previewContainerBox"></div>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="button" class="btn btn-submit" onclick="downloadPDF()" style="padding: 12px 30px; font-size: 15px;">💾 PDF-ის გადმოწერა</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="wizard-footer">
+            <button type="button" class="btn btn-prev" id="prevBtn" onclick="nextPrev(-1)">უკან</button>
+            <button type="button" class="btn btn-next" id="nextBtn" onclick="nextPrev(1)">შემდეგი</button>
+            <button type="button" class="btn btn-submit" id="submitBtn" onclick="handleFinalStep()" style="display:none;">შეთავაზების გენერირება</button>
+        </div>
+    </form>
+</div>
+
+<!-- დამალული შაბლონი PDF-ის გენერაციისთვის -->
+<div id="pdf-template" style="display:none; padding: 30px; background: #fff; color: #1e293b; font-family: 'Segoe UI', Tahoma, sans-serif;">
+    <div style="border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="color: #1e293b; font-size: 20px; margin-bottom: 5px;">ალუმინის სისტემების კომერციული შეთავაზება</h2>
+        <p style="color: #64748b; font-size: 12px;">თარიღი: <span id="pdf-date"></span></p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3 style="font-size: 14px; color: #2563eb; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">მომხმარებლის მონაცემები</h3>
+        <p style="font-size: 13px; margin-bottom: 4px;"><b>სახელი:</b> <span id="pdf-client-name"></span></p>
+        <p style="font-size: 13px; margin-bottom: 4px;"><b>ტელეფონი:</b> <span id="pdf-client-phone"></span></p>
+        <p style="font-size: 13px; margin-bottom: 4px;"><b>მისამართი:</b> <span id="pdf-client-address"></span></p>
+        <p style="font-size: 13px; margin-bottom: 4px;"><b>დემონტაჟი:</b> <span id="pdf-client-demolition"></span></p>
+    </div>
+
+    <div>
+        <h3 style="font-size: 14px; color: #2563eb; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">შერჩეული კონსტრუქციები და ნახაზები</h3>
+        <div id="pdf-items-container"></div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("sketchCanvas");
+    const ctx = canvas.getContext("2d");
+    
+    let currentTool = 'rect'; 
+    let isDrawing = false;
+    let startX = 100, startY = 80; 
+    let drawnShapes = []; 
+    let undoStack = [];
+    let redoStack = [];
+    let currentPins = [];
+    let activePin = null;
+
+    function getCanvasCoordinates(e) {
+        let rect = canvas.getBoundingClientRect();
+        let scaleX = canvas.width / rect.width;
+        let scaleY = canvas.height / rect.height;
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    }
+
+    function setTool(tool, btnElement) {
+        currentTool = tool;
+        document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active-shape'));
+        if(btnElement) btnElement.classList.add('active-shape');
+
+        let hint = document.getElementById("canvasHint");
+        if(tool === 'rect') {
+            hint.innerText = "მართკუთხედი. მიიტანეთ მაუსი არსებულ წერტილებთან და გადაათრიეთ.";
+        } else if(tool === 'triangle_right') {
+            hint.innerText = "სამკუთხედი (მარჯვენა წიბო). წვერის მიმართულება მაუსით.";
+        } else if(tool === 'triangle_left') {
+            hint.innerText = "სამკუთხედი (მარცხენა წიბო). წვერის მიმართულება მაუსით.";
+        } else if(tool === 'line') {
+            hint.innerText = "სწორი ხაზი (Line). დაიწყეთ პინიდან და გაავლება სასურველ წერტილამდე.";
+        }
+    }
+
+    function saveStateForUndo() {
+        undoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
+        redoStack = []; 
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+        let coords = getCanvasCoordinates(e);
+        let mouseX = coords.x;
+        let mouseY = coords.y;
+
+        activePin = null;
+        for (let pin of currentPins) {
+            let dist = Math.hypot(pin.x - mouseX, pin.y - mouseY);
+            if (dist < 12) {
+                activePin = pin;
+                break;
+            }
+        }
+
+        isDrawing = true;
+        if (activePin) {
+            startX = activePin.x;
+            startY = activePin.y;
+        } else {
+            startX = mouseX;
+            startY = mouseY;
+        }
+
+        saveStateForUndo(); 
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+        if (!isDrawing) return;
+        let coords = getCanvasCoordinates(e);
+        let currentX = coords.x;
+        let currentY = coords.y;
+
+        let w = currentX - startX;
+        let h = currentY - startY;
+
+        if (currentTool === 'line') {
+            if (drawnShapes.length > 0 && drawnShapes[drawnShapes.length - 1].tempLine) {
+                drawnShapes[drawnShapes.length - 1] = { type: 'line', x1: startX, y1: startY, x2: currentX, y2: currentY, tempLine: true };
+            } else {
+                drawnShapes.push({ type: 'line', x1: startX, y1: startY, x2: currentX, y2: currentY, tempLine: true });
+            }
+        } else {
+            if (drawnShapes.length > 0 && drawnShapes[drawnShapes.length - 1].temp) {
+                drawnShapes[drawnShapes.length - 1] = { type: currentTool, x: startX, y: startY, w: w, h: h, temp: true };
+            } else {
+                drawnShapes.push({ type: currentTool, x: startX, y: startY, w: w, h: h, temp: true });
+            }
+        }
+        redrawCanvasWithCurrentData();
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+        if (!isDrawing) return;
+        isDrawing = false;
+        let coords = getCanvasCoordinates(e);
+        let currentX = coords.x;
+        let currentY = coords.y;
+        let w = currentX - startX;
+        let h = currentY - startY;
+
+        if (drawnShapes.length > 0) {
+            if (currentTool === 'line') {
+                drawnShapes[drawnShapes.length - 1] = { type: 'line', x1: startX, y1: startY, x2: currentX, y2: currentY, tempLine: false };
+            } else {
+                drawnShapes.push({ type: currentTool, x: startX, y: startY, w: w, h: h, temp: false });
+                drawnShapes.splice(drawnShapes.length - 2, 1); // ვასუფთავებთ დროებითს და ვტოვებთ ფინალურს
+            }
+        }
+        activePin = null;
+        redrawCanvasWithCurrentData();
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+        if (isDrawing) {
+            isDrawing = false;
+            if (drawnShapes.length > 0 && (drawnShapes[drawnShapes.length - 1].temp || drawnShapes[drawnShapes.length - 1].tempLine)) {
+                drawnShapes.pop();
+            }
+            activePin = null;
+            redrawCanvasWithCurrentData();
+        }
+    });
+
+    function undoAction() {
+        if (undoStack.length === 0) return;
+        redoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
+        drawnShapes = undoStack.pop();
+        redrawCanvasWithCurrentData();
+    }
+
+    function redoAction() {
+        if (redoStack.length === 0) return;
+        undoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
+        drawnShapes = redoStack.pop();
+        redrawCanvasWithCurrentData();
+    }
+
+    function redrawCanvasWithCurrentData() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        currentPins = []; // სუფთავდება თავიდან, ივსება მხოლოდ დახატული ფორმების მიხედვით
+
+        drawnShapes.forEach(shape => {
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#1e293b";
+
+            if (shape.type === 'rect') {
+                let { x, y, w, h } = shape;
+                ctx.strokeRect(x, y, w, h);
+                // კუთხეები და ყველა გვერდის შუა წერტილი სიმეტრიულობისთვის:
+                currentPins.push(
+                    {x: x, y: y}, {x: x+w, y: y}, {x: x, y: y+h}, {x: x+w, y: y+h}, // კუთხეები
+                    {x: x + w/2, y: y}, {x: x + w/2, y: y+h}, // ზედა და ქვედა შუა წერტილები
+                    {x: x, y: y + h/2}, {x: x + w, y: y + h/2}  // მარცხენა და მარჯვენა შუა წერტილები
+                );
+            } else if (shape.type === 'triangle_right') {
+                let { x, y, w, h } = shape;
+                ctx.strokeRect(x, y, w, h);
+                ctx.beginPath();
+                ctx.moveTo(x + w, y);              
+                ctx.lineTo(x, y + (h / 2));        
+                ctx.lineTo(x + w, y + h);          
+                ctx.closePath();
+                ctx.stroke();
+                // სამკუთხედის კუთხეები და წიბოების შუა წერტილები
+                currentPins.push(
+                    {x: x, y: y}, {x: x+w, y: y}, {x: x, y: y+h}, {x: x+w, y: y+h},
+                    {x: x + w/2, y: y}, {x: x + w/2, y: y+h},
+                    {x: x, y: y + h/2}, {x: x + w, y: y + h/2},
+                    {x: x + w/2, y: y + h/4}, {x: x + w/2, y: y + 3*h/4} // შიდა დიაგონალების შუა წერტილები
+                );
+            } else if (shape.type === 'triangle_left') {
+                let { x, y, w, h } = shape;
+                ctx.strokeRect(x, y, w, h);
+                ctx.beginPath();
+                ctx.moveTo(x, y);                  
+                ctx.lineTo(x + w, y + (h / 2));    
+                ctx.lineTo(x, y + h);              
+                ctx.closePath();
+                ctx.stroke();
+                currentPins.push(
+                    {x: x, y: y}, {x: x+w, y: y}, {x: x, y: y+h}, {x: x+w, y: y+h},
+                    {x: x + w/2, y: y}, {x: x + w/2, y: y+h},
+                    {x: x, y: y + h/2}, {x: x + w, y: y + h/2},
+                    {x: x + w/2, y: y + h/4}, {x: x + w/2, y: y + 3*h/4}
+                );
+            } else if (shape.type === 'line') {
+                ctx.beginPath();
+                ctx.moveTo(shape.x1, shape.y1);
+                ctx.lineTo(shape.x2, shape.y2);
+                ctx.stroke();
+                // ხაზის ბოლოები და შუა წერტილი
+                currentPins.push(
+                    {x: shape.x1, y: shape.y1}, 
+                    {x: shape.x2, y: shape.y2},
+                    {x: (shape.x1 + shape.x2) / 2, y: (shape.y1 + shape.y2) / 2}
+                );
+            }
+        });
+
+        // ვხატავთ წერტილებს (პინებს)
+        currentPins.forEach(pin => {
+            ctx.beginPath();
+            ctx.arc(pin.x, pin.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ef4444";
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = "#fff";
+            ctx.stroke();
+        });
+
+        let widthVal = document.getElementById("item_width").value;
+        let heightVal = document.getElementById("item_height").value;
+
+        ctx.font = "14px Segoe UI";
+        ctx.fillStyle = "#2563eb";
+        ctx.textAlign = "center";
+
+        if (drawnShapes.length > 0) {
+            let lastShape = drawnShapes[drawnShapes.length - 1];
+            if (lastShape && lastShape.w !== undefined) {
+                let { x, y, w, h } = lastShape;
+                let bottomY = (h < 0) ? y + 22 : y + h + 22;
+                ctx.fillText(`სიგანე: ${widthVal !== '' ? widthVal + ' სმ' : '-'}`, x + (w / 2), bottomY);
+
+                let rightX = (w < 0) ? x + 55 : x + w + 55;
+                ctx.fillText(`სიმაღლე: ${heightVal !== '' ? heightVal + ' სმ' : '-'}`, rightX, y + (h / 2));
+            } else {
+                ctx.fillText(`სიგანე: ${widthVal !== '' ? widthVal + ' სმ' : '-'} | სიმაღლე: ${heightVal !== '' ? heightVal + ' სმ' : '-'}`, canvas.width / 2, canvas.height - 15);
+            }
+        } else {
+            ctx.fillText(`სიგანე: ${widthVal !== '' ? widthVal + ' სმ' : 'მიუთითეთ ზომა'} | სიმაღლე: ${heightVal !== '' ? heightVal + ' სმ' : 'მიუთითეთ ზომა'}`, canvas.width / 2, canvas.height - 15);
+        }
+
+        document.getElementById("custom_sketch_data").value = canvas.toDataURL();
+    }
+
+    function updateCanvasDrawing() {
+        redrawCanvasWithCurrentData();
+    }
+
+    function clearCanvas() {
+        saveStateForUndo();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawnShapes = [];
+        currentPins = [];
+        document.getElementById("custom_sketch_data").value = "";
+        redrawCanvasWithCurrentData();
+    }
+
+    let currentTab = 0;
+    let currentItemIndex = 1;
+    let itemsList = [];
+    
+    function getStepsArray() {
+        return ["step-1", "step-2", "step-3", "step-4", "step-5", "step-6", "step-7", "step-8", "step-9"];
+    }
+
+    function showTab(n) {
+        let stepIds = getStepsArray();
+        let allSteps = document.getElementsByClassName("step");
+        
+        for (let s of allSteps) {
+            s.classList.remove("active");
+        }
+
+        if (n >= stepIds.length) n = stepIds.length - 1;
+        if (n < 0) n = 0;
+        currentTab = n;
+
+        let activeStepElement = document.getElementById(stepIds[currentTab]);
+        if (activeStepElement) {
+            activeStepElement.classList.add("active");
+        }
+
+        if (currentTab === 1) {
+            setTimeout(() => { redrawCanvasWithCurrentData(); }, 50);
+        }
+
+        if (currentTab === 0) {
+            document.getElementById("prevBtn").style.display = "none";
+        } else {
+            document.getElementById("prevBtn").style.display = "inline-block";
+        }
+
+        if (currentTab === stepIds.length - 1) {
+            document.getElementById("nextBtn").style.display = "none";
+            document.getElementById("submitBtn").style.display = "none";
+            document.getElementById("itemCounterTitle").innerText = "შეთავაზება მზად არის";
+            preparePreview();
+        } else if (currentTab === stepIds.length - 2) {
+            document.getElementById("nextBtn").style.display = "none";
+            document.getElementById("submitBtn").style.display = "inline-block";
+            document.getElementById("itemCounterTitle").innerText = "კონსტრუქცია №" + currentItemIndex + " (დასასრული)";
+        } else {
+            document.getElementById("nextBtn").style.display = "inline-block";
+            document.getElementById("submitBtn").style.display = "none";
+            if (currentTab === 0) {
+                document.getElementById("itemCounterTitle").innerText = "საკონტაქტო ინფორმაცია და დემონტაჟი";
+            } else {
+                document.getElementById("itemCounterTitle").innerText = "კონსტრუქცია №" + currentItemIndex + " - ზომები და ნახაზი";
+            }
+        }
+
+        let progressPercent = ((currentTab + 1) / stepIds.length) * 100;
+        document.getElementById("progressFill").style.width = progressPercent + "%";
+    }
+
+    function nextPrev(n) {
+        let stepIds = getStepsArray();
+        if (currentTab === stepIds.length - 2 && n === 1) {
+            handleFinalStep();
+            return;
+        }
+
+        currentTab = currentTab + n;
+        showTab(currentTab);
+    }
+
+    function selectCard(element, inputId, value) {
+        let grid = element.parentElement;
+        let cards = grid.getElementsByClassName("card-option");
+        for (let c of cards) {
+            c.classList.remove("selected");
+        }
+        element.classList.add("selected");
+        document.getElementById(inputId).value = value;
+    }
+
+    function handleFinalStep() {
+        let addMoreVal = document.getElementById("addMoreInput").value;
+        saveCurrentItem();
+
+        let stepIds = getStepsArray();
+        if (addMoreVal === "true") {
+            resetItemFields();
+            currentItemIndex++;
+            currentTab = 1; 
+            showTab(currentTab);
+        } else {
+            currentTab = stepIds.length - 1;
+            showTab(currentTab);
+        }
+    }
+
+    function setAddMore(status) {
+        document.getElementById("addMoreInput").value = status;
+        if (status) {
+            document.getElementById("optYes").classList.add("selected");
+            document.getElementById("optNo").classList.remove("selected");
+        } else {
+            document.getElementById("optNo").classList.add("selected");
+            document.getElementById("optYes").classList.remove("selected");
+        }
+    }
+
+    function saveCurrentItem() {
+        redrawCanvasWithCurrentData();
+        let sketchData = document.getElementById("custom_sketch_data").value;
+        
+        let item = {
+            index: currentItemIndex,
+            system_type: document.getElementById("system_type").value,
+            thermal_break: document.getElementById("thermal_break").value,
+            width: document.getElementById("item_width").value,
+            height: document.getElementById("item_height").value,
+            sections_count: document.getElementById("sections_count").value,
+            opening_direction: document.getElementById("opening_direction").value,
+            threshold_type: document.getElementById("threshold_type").value,
+            glass_type: document.getElementById("glass_type").value,
+            glass_extra: document.getElementById("glass_extra").value,
+            profile_color: document.getElementById("profile_color").value,
+            sketch: sketchData
+        };
+        let existingIndex = itemsList.findIndex(i => i.index === currentItemIndex);
+        if (existingIndex > -1) {
+            itemsList[existingIndex] = item;
+        } else {
+            itemsList.push(item);
+        }
+    }
+
+    function resetItemFields() {
+        document.getElementById("item_width").value = "";
+        document.getElementById("item_height").value = "";
+        document.getElementById("opening_direction").value = "";
+        document.getElementById("glass_type").value = "";
+        document.getElementById("profile_color").value = "";
+        drawnShapes = [];
+        undoStack = [];
+        redoStack = [];
+        currentPins = [];
+        redrawCanvasWithCurrentData();
+        setAddMore(false);
+    }
+
+    function populateTemplateData() {
+        document.getElementById("pdf-date").innerText = new Date().toLocaleDateString();
+        document.getElementById("pdf-client-name").innerText = document.getElementById("client_name").value || '-';
+        document.getElementById("pdf-client-phone").innerText = document.getElementById("client_phone").value || '-';
+        document.getElementById("pdf-client-address").innerText = document.getElementById("client_address").value || '-';
+        document.getElementById("pdf-client-demolition").innerText = document.getElementById("demolition_needed").value || '-';
+
+        let container = document.getElementById("pdf-items-container");
+        container.innerHTML = "";
+
+        itemsList.forEach((item) => {
+            let div = document.createElement("div");
+            div.style.cssText = "border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 15px; background: #f8fafc; font-size: 12px;";
+            
+            let sketchHtml = '';
+            if (item.sketch) {
+                sketchHtml = `<p style="margin-top: 10px;"><b>ნახაზი ზომებით:</b><br><img src="${item.sketch}" style="width: 100%; max-width: 400px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; margin-top: 4px;"></p>`;
+            }
+
+            div.innerHTML = `
+                <p style="font-size: 14px; color: #2563eb; margin-bottom: 6px;"><b>კონსტრუქცია №${item.index}</b></p>
+                <p><b>ტიპი:</b> ${item.system_type || '-'} (${item.thermal_break || ''})</p>
+                <p><b>ზომები:</b> სიგანე: ${item.width || '-'} სმ | სიმაღლე: ${item.height || '-'} სმ</p>
+                <p><b>სექციები:</b> ${item.sections_count || '-'}</p>
+                <p><b>გაღება / ზღურბლი:</b> ${item.opening_direction || '-'} | ზღურბლი: ${item.threshold_type || '-'}</p>
+                <p><b>მინა:</b> ${item.glass_type || '-'} (${item.glass_extra || ''})</p>
+                <p><b>ფერი:</b> ${item.profile_color || '-'}</p>
+                ${sketchHtml}
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function preparePreview() {
+        saveCurrentItem();
+        populateTemplateData();
+        let templateHtml = document.getElementById("pdf-template").innerHTML;
+        document.getElementById("previewContainerBox").innerHTML = '<div style="padding: 20px;">' + templateHtml + '</div>';
+    }
+
+    async function downloadPDF() {
+        saveCurrentItem();
+        populateTemplateData();
+        let element = document.getElementById("pdf-template");
+        element.style.display = "block";
+
+        let opt = {
+            margin:       10,
+            filename:     'Aluminum_Offer.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        try {
+            let worker = html2pdf().from(element).set(opt);
+            let pdfBlob = await worker.outputPdf('blob');
+            element.style.display = "none";
+
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(pdfBlob);
+            link.download = 'Aluminum_Offer.pdf';
+            link.click();
+
+        } catch (e) {
+            element.style.display = "none";
+            console.error(e);
+        }
+    }
+
+    redrawCanvasWithCurrentData();
+    showTab(currentTab);
+</script>
+
+</body>
+</html>
