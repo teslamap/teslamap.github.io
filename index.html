@@ -7,7 +7,7 @@
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background: #000000; 
+            background: #050505; 
             color: #ffffff; 
             margin: 0; 
             padding: 40px 20px; 
@@ -16,84 +16,208 @@
             align-items: center; 
             min-height: 100vh;
             box-sizing: border-box;
+            overflow-x: hidden;
+            position: relative;
         }
+
+        /* კვამლის კანვასი */
+        #trail-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+        }
+
         .container { 
             width: 100%; 
             max-width: 600px; 
-            background: #111111; 
+            background: rgba(17, 17, 17, 0.75); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             padding: 40px; 
-            border-radius: 14px; 
-            border: 1px solid #222222;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+            border-radius: 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 40px rgba(232, 33, 39, 0.1); 
             text-align: center;
+            z-index: 1;
         }
+
         h1 { 
             margin-top: 0; 
             color: #fff; 
-            font-weight: 400;
-            letter-spacing: 1.5px;
-            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            font-size: 32px;
             margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffffff, #888888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
+
         .subtitle {
-            color: #86868b;
+            color: #a1a1a6;
             font-size: 15px;
-            margin-bottom: 35px;
+            margin-bottom: 30px;
             letter-spacing: 0.5px;
         }
+
         .nav-grid {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 4px;
         }
+
+        .nav-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .nav-grid::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .nav-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
         .nav-btn { 
-            background: #1a1a1a; 
+            background: rgba(26, 26, 26, 0.8); 
             color: white; 
-            border: 1px solid #333; 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
             padding: 16px 20px; 
-            border-radius: 8px; 
+            border-radius: 12px; 
             cursor: pointer; 
             font-weight: 500; 
-            font-size: 16px; 
+            font-size: 15px; 
             text-decoration: none;
             display: block;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
         }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transition: 0.5s;
+        }
+
+        .nav-btn:hover::before {
+            left: 100%;
+        }
+
         .nav-btn:hover { 
             background: #e82127; 
             border-color: #e82127;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(232, 33, 39, 0.4);
         }
+
         .footer-note {
-            margin-top: 30px;
-            color: #555;
+            margin-top: 25px;
+            color: #666;
             font-size: 13px;
+            letter-spacing: 0.5px;
         }
     </style>
 </head>
 <body>
+
+    <!-- ცისარტყელა კვამლის კანვასი -->
+    <canvas id="trail-canvas"></canvas>
 
     <div class="container">
         <h1>მოგესალმებით</h1>
         <div class="subtitle">აირჩიეთ სასურველი ინსტრუმენტი ან სისტემა</div>
         
         <div class="nav-grid">
-            <!-- ღილაკი 1: გადადის vin.html-ზე (სადაც შენი დეკოდერია ჩასადები) -->
             <a href="vin.html" class="nav-btn">VIN დეკოდერი და სკანერი</a>
-
-            <!-- ღილაკი 2: გადადის diagnostics.html-ზე -->
             <a href="diagnostics.html" class="nav-btn">შეთავაზების ფორმა</a>
-
-            <!-- ღილაკი 3: გადადის routes.html-ზე -->
             <a href="routes.html" class="nav-btn">მარშრუტები და ნავიგაცია</a>
-
-            <!-- ღილაკი 4: გადადის tools.html-ზე -->
             <a href="tools.html" class="nav-btn">დამხმარე ინსტრუმენტები</a>
+
+            <a href="project1.html" class="nav-btn">პროექტი 5</a>
+            <a href="project2.html" class="nav-btn">პროექტი 6</a>
+            <a href="project3.html" class="nav-btn">პროექტი 7</a>
+            <a href="project4.html" class="nav-btn">პროექტი 8</a>
         </div>
 
         <div class="footer-note">Tesla Ecosystem Hub &bull; GitHub Pages</div>
     </div>
 
+    <script>
+        const canvas = document.getElementById('trail-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const particles = [];
+        let hue = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            // ყოველ მოძრაობაზე ვამატებთ რამდენიმე ნაწილაკს კვამლის ეფექტისთვის
+            for (let i = 0; i < 2; i++) {
+                particles.push({
+                    x: e.clientX + (Math.random() - 0.5) * 10,
+                    y: e.clientY + (Math.random() - 0.5) * 10,
+                    size: Math.random() * 15 + 10,
+                    vx: (Math.random() - 0.5) * 1.5, // ჰორიზონტალური გაფანტვა
+                    vy: (Math.random() - 0.5) * 1.5 - 0.5, // ვერტიკალური ოდნავ ზევით აწევა
+                    hue: hue,
+                    life: 1,
+                    decay: Math.random() * 0.008 + 0.003 // ძალიან ნელი გაქრობა (კვამლივით)
+                });
+            }
+            hue = (hue + 2) % 360;
+        });
+
+        function animate() {
+            // ტოვებს მსუბუქ კვალს ფონზე (motion blur ეფექტისთვის)
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.life -= p.decay; // თანდათანობითი გაქრობა
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                // ნაწილაკის მოძრაობა (გაფანტვა)
+                p.x += p.vx;
+                p.y += p.vy;
+                p.size += 0.2; // იზრდება ზომაში როგორც კვამლი
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${p.hue}, 80%, 50%, ${p.life * 0.15})`;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = `hsl(${p.hue}, 80%, 50%)`;
+                ctx.fill();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
 </body>
 </html>
